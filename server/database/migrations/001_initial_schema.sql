@@ -13,8 +13,8 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL unique,
-    year INTEGER NOT NULL CHECK (year >= 1 AND year <= 5),
-    branch VARCHAR(100) NOT NULL,
+    year INTEGER CHECK (year >= 1 AND year <= 5),
+    branch VARCHAR(100),
     password_hash VARCHAR(255) NOT NULL,
     avatar_url VARCHAR(255),
     college_id UUID references colleges(id) ON DELETE SET NULL,
@@ -129,6 +129,18 @@ CREATE TABLE notifications (
 
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
 
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+--for the super admin to approve or reject college requests
+CREATE TABLE college_requests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    college_name VARCHAR(100) NOT NULL,
+    email_domain VARCHAR(100) NOT NULL UNIQUE,
+    logo_url VARCHAR(255) NOT NULL,
+    requested_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
