@@ -1,9 +1,10 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import { UserRole } from "../db/queries/userQueries.js";
 
 type JwtPayload = {
     userId: string;
-    role: string;
+    role: UserRole;
 };
 
 export type AuthRequest = express.Request & { user?: JwtPayload };
@@ -31,4 +32,22 @@ const isLoggedIn = (
     }
 };
 
-export { isLoggedIn };
+const roleGuard = (...allowedRoles: UserRole[]) => {
+    return (
+        req: AuthRequest,
+        res: express.Response,
+        next: express.NextFunction,
+    ) => {
+        if (!req.user) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        next();
+    };
+};
+
+export { isLoggedIn, roleGuard };

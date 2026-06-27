@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import pool from "./db/index.js";
 import authRoutes from "./routes/auth.js";
+import userRoutes from "./routes/users.js";
 import cookieParser from "cookie-parser";
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({ credentials: true, origin: true }));
 
 app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");
