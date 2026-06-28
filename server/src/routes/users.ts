@@ -7,6 +7,9 @@ import { isLoggedIn } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
-router.route("/me").get(isLoggedIn, getMyProfile).patch(isLoggedIn, updateMyProfile);
+router
+    .route("/me")
+    .get(isLoggedIn, getMyProfile)
+    .patch(isLoggedIn, updateMyProfile);
 
 export default router;

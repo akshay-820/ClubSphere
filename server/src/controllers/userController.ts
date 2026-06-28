@@ -1,8 +1,7 @@
+//getMyProfile and updateMyProfile functions
+
 import express from "express";
-import {
-    getUserById,
-    updateUserProfile,
-} from "../db/queries/userQueries.js";
+import { getUserById, updateUserProfile } from "../db/queries/userQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 
 const getMyProfile = async (req: AuthRequest, res: express.Response) => {

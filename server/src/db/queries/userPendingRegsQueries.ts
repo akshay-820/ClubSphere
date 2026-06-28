@@ -1,3 +1,4 @@
+//this file contains pending registration of users who have not verified their email yet
 import pool from "../index.js";
 
 type UpsertPendingRegistrationInput = {

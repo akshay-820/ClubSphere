@@ -1,3 +1,5 @@
+//has registerUser , verifyRegistrationOtp and loginUser functions
+
 import express from "express";
 import bcrypt from "bcrypt";
 import { createUser, getUserByEmail } from "../db/queries/userQueries.js";
@@ -7,7 +9,7 @@ import {
     getPendingRegistrationByEmail,
     incrementPendingRegistrationOtpAttempts,
     upsertPendingRegistration,
-} from "../db/queries/pendingRegistrationQueries.js";
+} from "../db/queries/userPendingRegsQueries.js";
 import { generateOtp, hashOtp } from "../utils/otp.js";
 import { sendRegistrationOtpEmail } from "../utils/mailer.js";
 
@@ -97,7 +99,7 @@ const verifyRegistrationOtp = async (
                 .json({ error: "No pending registration found" });
         }
 
-        if (pendingRegistration.otp_attempts >= 5) {
+        if (pendingRegistration.otp_attempts >= 2) {
             return res.status(429).json({
                 error: "Too many incorrect OTP attempts. Please register again",
             });
@@ -138,9 +140,11 @@ const verifyRegistrationOtp = async (
 
         setAuthCookie(res, user.id, user.role);
 
+        const { password_hash, ...userWithoutPassword } = user;
+
         return res.status(201).json({
             message: "Registration completed successfully",
-            user,
+            user: userWithoutPassword,
         });
     } catch (error) {
         console.error("Error verifying registration OTP:", error);

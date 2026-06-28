@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import pool from "./db/index.js";
 import authRoutes from "./routes/auth.js";
+import collegeRequestsRoutes from "./routes/collegeRequests.js";
+import collegeRoutes from "./routes/colleges.js";
 import userRoutes from "./routes/users.js";
 import cookieParser from "cookie-parser";
 
@@ -14,6 +16,8 @@ app.use(cors({ credentials: true, origin: true }));
 
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
+app.use("/colleges", collegeRoutes);
+app.use("/college-requests", collegeRequestsRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");
