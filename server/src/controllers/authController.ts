@@ -28,6 +28,14 @@ const setAuthCookie = (
     });
 };
 
+const clearAuthCookie = (res: express.Response) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+    });
+};
+
 const registerUser = async (req: express.Request, res: express.Response) => {
     try {
         let { name, email, year, branch, password, college_id } = req.body;
@@ -199,4 +207,17 @@ const loginUser = async (req: express.Request, res: express.Response) => {
     }
 };
 
-export { registerUser, verifyRegistrationOtp, loginUser };
+const logoutUser = async (_req: express.Request, res: express.Response) => {
+    try {
+        clearAuthCookie(res);
+
+        return res.status(200).json({
+            message: "User logged out successfully",
+        });
+    } catch (error) {
+        console.error("Error logging out user:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export { registerUser, verifyRegistrationOtp, loginUser, logoutUser };

@@ -3,6 +3,7 @@ import express from "express";
 const router = Router();
 import {
     loginUser,
+    logoutUser,
     registerUser,
     verifyRegistrationOtp,
 } from "../controllers/authController.js";
@@ -16,6 +17,7 @@ router.route("/register").post(registerUser);
 router.route("/register/verify").post(verifyRegistrationOtp);
 
 router.route("/login").post(loginUser);
+router.route("/logout").post(isLoggedIn, logoutUser);
 
 router
     .route("/protected")

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-    deleteCollegeDetails,
+    deleteCollegePerm,
     getColleges,
     updateCollegeDetails,
 } from "../controllers/collegeController.js";
@@ -17,6 +17,6 @@ router
         roleGuard("super_admin", "college_admin"),
         updateCollegeDetails,
     )
-    .delete(isLoggedIn, roleGuard("super_admin"), deleteCollegeDetails);
+    .delete(isLoggedIn, roleGuard("super_admin"), deleteCollegePerm);
 
 export default router;

@@ -82,7 +82,7 @@ const updateCollegeDetails = async (
     }
 };
 
-const deleteCollegeDetails = async (
+const deleteCollegePerm = async (
     req: express.Request,
     res: express.Response,
 ) => {
@@ -104,4 +104,4 @@ const deleteCollegeDetails = async (
     }
 };
 
-export { deleteCollegeDetails, getColleges, updateCollegeDetails };
+export { deleteCollegePerm, getColleges, updateCollegeDetails };
