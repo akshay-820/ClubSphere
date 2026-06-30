@@ -54,7 +54,13 @@ export async function createUser(user: CreateUserInput) {
 
 export async function getUserById(id: string) {
     const query = `
-        SELECT id,name,email,year,branch,college_id,avatar_url,role,email_verified FROM users WHERE id = $1;
+        SELECT
+            u.id, u.name, u.email, u.year, u.branch,
+            u.college_id, u.avatar_url, u.role, u.email_verified,
+            c.name AS college_name
+        FROM users u
+        LEFT JOIN colleges c ON c.id = u.college_id
+        WHERE u.id = $1;
     `;
     try {
         const result = await pool.query(query, [id]);

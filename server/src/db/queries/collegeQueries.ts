@@ -30,6 +30,17 @@ export async function getCollegeByEmailDomain(emailDomain: string) {
     return result.rows[0] ?? null;
 }
 
+export async function getCollegeById(id: string) {
+    const query = `
+        SELECT id, name, email_domain, logo_url
+        FROM colleges
+        WHERE id = $1;
+    `;
+
+    const result = await pool.query(query, [id]);
+    return result.rows[0] ?? null;
+}
+
 export async function updateCollege(id: string, college: UpdateCollegeInput) {
     const query = `
         UPDATE colleges

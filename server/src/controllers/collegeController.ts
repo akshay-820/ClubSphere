@@ -2,6 +2,7 @@ import express from "express";
 import {
     deleteCollege,
     getAllColleges,
+    getCollegeById,
     updateCollege,
 } from "../db/queries/collegeQueries.js";
 
@@ -10,6 +11,20 @@ import {
     normalizeEmailDomain,
     optionalTrimmedString,
 } from "../utils/validation.js";
+
+const getCollegeDetails = async (req: express.Request, res: express.Response) => {
+    try {
+        const id = getRouteParam(req.params.id);
+        const college = await getCollegeById(id);
+        if (!college) {
+            return res.status(404).json({ error: "College not found" });
+        }
+        return res.status(200).json({ college });
+    } catch (error) {
+        console.error("Error fetching college:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
 
 const getColleges = async (req: express.Request, res: express.Response) => {
     try {
@@ -104,4 +119,4 @@ const deleteCollegePerm = async (
     }
 };
 
-export { deleteCollegePerm, getColleges, updateCollegeDetails };
+export { deleteCollegePerm, getColleges, getCollegeDetails, updateCollegeDetails };
