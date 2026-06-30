@@ -5,6 +5,7 @@ import { UserRole } from "../db/queries/userQueries.js";
 type JwtPayload = {
     userId: string;
     role: UserRole;
+    collegeId: string;
 };
 
 export type AuthRequest = express.Request & { user?: JwtPayload };
@@ -25,7 +26,11 @@ const isLoggedIn = (
             token,
             process.env.JWT_SECRET as string,
         ) as JwtPayload;
-        req.user = { userId: decoded.userId, role: decoded.role };
+        req.user = {
+            userId: decoded.userId,
+            role: decoded.role,
+            collegeId: decoded.collegeId,
+        };
         next();
     } catch (error) {
         return res.status(401).json({ error: "Unauthorized" });

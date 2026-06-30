@@ -3,6 +3,7 @@ import jwt, { SignOptions } from "jsonwebtoken";
 type TokenPayload = {
     userId: string;
     role: string;
+    collegeId: string;
 };
 
 export function generateToken(payload: TokenPayload) {

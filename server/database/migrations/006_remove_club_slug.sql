@@ -1,0 +1,5 @@
+ALTER TABLE clubs
+DROP CONSTRAINT clubs_slug_key;
+
+ALTER TABLE clubs
+DROP COLUMN slug;

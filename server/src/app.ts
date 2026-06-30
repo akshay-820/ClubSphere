@@ -6,6 +6,7 @@ import collegeRequestsRoutes from "./routes/collegeRequests.js";
 import collegeRoutes from "./routes/colleges.js";
 import userRoutes from "./routes/users.js";
 import cookieParser from "cookie-parser";
+import clubRequestsRoutes from "./routes/clubRequests.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/colleges", collegeRoutes);
 app.use("/college-requests", collegeRequestsRoutes);
+app.use("/club-requests", clubRequestsRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");

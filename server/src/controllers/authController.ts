@@ -13,8 +13,13 @@ import {
 import { generateOtp, hashOtp } from "../utils/otp.js";
 import { sendRegistrationOtpEmail } from "../utils/mailer.js";
 
-const setAuthCookie = (res: express.Response, userId: string, role: string) => {
-    const auth_token = generateToken({ userId, role });
+const setAuthCookie = (
+    res: express.Response,
+    userId: string,
+    role: string,
+    collegeId: string,
+) => {
+    const auth_token = generateToken({ userId, role, collegeId });
     res.cookie("token", auth_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -138,7 +143,7 @@ const verifyRegistrationOtp = async (
 
         await deletePendingRegistration(pendingRegistration.id);
 
-        setAuthCookie(res, user.id, user.role);
+        setAuthCookie(res, user.id, user.role, user.college_id);
 
         const { password_hash, ...userWithoutPassword } = user;
 
@@ -180,7 +185,7 @@ const loginUser = async (req: express.Request, res: express.Response) => {
                 .json({ error: "Please verify your email before logging in" });
         }
 
-        setAuthCookie(res, user.id, user.role);
+        setAuthCookie(res, user.id, user.role, user.college_id);
 
         const { password_hash, ...userWithoutPassword } = user;
 

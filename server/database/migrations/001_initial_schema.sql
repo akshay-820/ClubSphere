@@ -32,7 +32,7 @@ CREATE TABLE clubs (
     description TEXT,
     category VARCHAR(50) NOT NULL CHECK (category IN ('technical', 'cultural', 'sports', 'literary', 'other')),
     logo_url VARCHAR(255),
-    slug VARCHAR(120) NOT NULL UNIQUE,
+    slug VARCHAR(120) NOT NULL UNIQUE, --removed
 
     membership_fee NUMERIC(10, 2) NOT NULL DEFAULT 0,
     college_id UUID NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
