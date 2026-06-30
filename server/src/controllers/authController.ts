@@ -2,7 +2,11 @@
 
 import express from "express";
 import bcrypt from "bcrypt";
-import { createUser, getUserByEmail } from "../db/queries/userQueries.js";
+import {
+    createUser,
+    getUserByEmail,
+    getUserById,
+} from "../db/queries/userQueries.js";
 import { generateToken } from "../utils/jwt.js";
 import {
     deletePendingRegistration,
@@ -153,7 +157,9 @@ const verifyRegistrationOtp = async (
 
         setAuthCookie(res, user.id, user.role, user.college_id);
 
-        const { password_hash, ...userWithoutPassword } = user;
+        const fullUser = await getUserById(user.id);
+
+        const { password_hash, ...userWithoutPassword } = fullUser;
 
         return res.status(201).json({
             message: "Registration completed successfully",
@@ -195,7 +201,9 @@ const loginUser = async (req: express.Request, res: express.Response) => {
 
         setAuthCookie(res, user.id, user.role, user.college_id);
 
-        const { password_hash, ...userWithoutPassword } = user;
+        const fullUser = await getUserById(user.id);
+
+        const { password_hash, ...userWithoutPassword } = fullUser;
 
         return res.status(200).json({
             message: "User logged in successfully",

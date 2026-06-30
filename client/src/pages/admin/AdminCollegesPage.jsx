@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "../../components/DashboardLayout";
 import { PageMeta } from "../../components/PageMeta";
 import { Spinner } from "../../components/Spinner";
@@ -19,17 +19,17 @@ export default function AdminCollegesPage() {
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
 
-    const fetchColleges = () => {
+    const fetchColleges = useCallback(() => {
         setLoading(true);
         api.get("/colleges")
             .then((res) => setColleges(res.data.colleges || []))
             .catch(() => setError("Failed to load colleges."))
             .finally(() => setLoading(false));
-    };
+    }, []);
 
     useEffect(() => {
-        fetchColleges();
-    }, []);
+        queueMicrotask(fetchColleges);
+    }, [fetchColleges]);
 
     const startEdit = (college) => {
         setEditingId(college.id);
@@ -85,10 +85,10 @@ export default function AdminCollegesPage() {
         <DashboardLayout>
             <PageMeta title="Manage Colleges" />
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-[#f0f0ff]">
+                <h1 className="text-2xl font-bold text-text-primary">
                     Manage Colleges
                 </h1>
-                <p className="text-sm text-[#8888aa] mt-0.5">
+                <p className="text-sm text-text-secondary mt-0.5">
                     Edit or remove colleges registered on ClubSphere.
                 </p>
             </div>
@@ -102,8 +102,10 @@ export default function AdminCollegesPage() {
 
             {!loading && colleges.length === 0 && !error && (
                 <div className="text-center py-20">
-                    <Building2 className="w-10 h-10 text-[#555577] mx-auto mb-3" />
-                    <p className="text-[#8888aa] text-sm">No colleges yet.</p>
+                    <Building2 className="w-10 h-10 text-text-muted mx-auto mb-3" />
+                    <p className="text-text-secondary text-sm">
+                        No colleges yet.
+                    </p>
                 </div>
             )}
 
@@ -116,7 +118,7 @@ export default function AdminCollegesPage() {
                                     <ErrorAlert message={saveError} />
                                     <div className="grid sm:grid-cols-2 gap-3">
                                         <div>
-                                            <label className="text-xs text-[#555577] mb-1 block">
+                                            <label className="text-xs text-text-muted mb-1 block">
                                                 Name
                                             </label>
                                             <input
@@ -132,7 +134,7 @@ export default function AdminCollegesPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs text-[#555577] mb-1 block">
+                                            <label className="text-xs text-text-muted mb-1 block">
                                                 Email Domain
                                             </label>
                                             <input
@@ -149,7 +151,7 @@ export default function AdminCollegesPage() {
                                             />
                                         </div>
                                         <div className="sm:col-span-2">
-                                            <label className="text-xs text-[#555577] mb-1 block">
+                                            <label className="text-xs text-text-muted mb-1 block">
                                                 Logo URL
                                             </label>
                                             <input
@@ -192,19 +194,19 @@ export default function AdminCollegesPage() {
                                         <img
                                             src={college.logo_url}
                                             alt={college.name}
-                                            className="w-10 h-10 rounded-lg object-contain bg-white/5 flex-shrink-0"
+                                            className="w-10 h-10 rounded-lg object-contain bg-white/5 shrink-0"
                                         />
                                     ) : (
-                                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                                             <Building2 className="w-5 h-5 text-blue-400" />
                                         </div>
                                     )}
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-[#f0f0ff] text-sm">
+                                        <p className="font-medium text-text-primary text-sm">
                                             {college.name}
                                         </p>
                                         {college.email_domain && (
-                                            <p className="text-xs text-[#555577] flex items-center gap-1 mt-0.5">
+                                            <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
                                                 <Globe className="w-3 h-3" />
                                                 {college.email_domain}
                                             </p>
@@ -213,7 +215,7 @@ export default function AdminCollegesPage() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => startEdit(college)}
-                                            className="p-1.5 rounded-lg text-[#555577] hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                                            className="p-1.5 rounded-lg text-text-muted hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                                             title="Edit"
                                         >
                                             <Pencil className="w-4 h-4" />
@@ -222,7 +224,7 @@ export default function AdminCollegesPage() {
                                             onClick={() =>
                                                 handleDelete(college.id)
                                             }
-                                            className="p-1.5 rounded-lg text-[#555577] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                            className="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                                             title="Delete"
                                         >
                                             <Trash2 className="w-4 h-4" />
