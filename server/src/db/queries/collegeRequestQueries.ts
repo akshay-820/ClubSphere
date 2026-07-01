@@ -5,26 +5,24 @@ type CreateCollegeRequestInput = {
     college_name: string;
     email_domain: string;
     logo_url: string;
-    requested_by: string;
 };
 
 //just inserts a new college request into the college_requests table
 export async function createCollegeRequest(request: CreateCollegeRequestInput) {
     const query = `
         INSERT INTO college_requests (
-            college_name, email_domain, logo_url, requested_by
+            college_name, email_domain, logo_url
         )
-        VALUES ($1, $2, $3, $4)
+        VALUES ($1, $2, $3)
         RETURNING
             id, college_name, email_domain, logo_url,
-            requested_by, status, created_at;
+            status, created_at;
     `;
 
     const result = await pool.query(query, [
         request.college_name,
         request.email_domain,
         request.logo_url,
-        request.requested_by,
     ]);
     return result.rows[0];
 }
@@ -37,13 +35,9 @@ export async function getCollegeRequests(status: CollegeRequestStatus) {
             cr.college_name,
             cr.email_domain,
             cr.logo_url,
-            cr.requested_by,
             cr.status,
-            cr.created_at,
-            u.name AS requested_by_name,
-            u.email AS requested_by_email
+            cr.created_at
         FROM college_requests cr
-        LEFT JOIN users u ON u.id = cr.requested_by
         WHERE cr.status = $1
         ORDER BY cr.created_at DESC;
     `;

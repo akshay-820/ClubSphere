@@ -21,6 +21,7 @@ export default function App() {
         <Routes>
           {/* Public landing */}
           <Route path="/" element={<HomePage />} />
+          <Route path="/request-college" element={<RequestCollegePage />} />
 
           {/* Auth routes — redirect logged-in users away */}
           <Route element={<GuestOnly />}>
@@ -33,8 +34,6 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/request-college" element={<RequestCollegePage />} />
-
             {/* College admin: edit their own college */}
             <Route
               element={<RequireRole roles={['college_admin', 'super_admin']} />}

@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   FileText,
@@ -14,6 +14,7 @@ import logo from '../assets/logo.png'
 export function DashboardLayout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logout()
@@ -51,10 +52,6 @@ export function DashboardLayout({ children }) {
             My Profile
           </NavLink>
 
-          <NavLink to="/request-college" className={navLink}>
-            <Building2 className="w-4 h-4" />
-            Request College
-          </NavLink>
 
           {/* Super Admin section */}
           {user?.role === 'super_admin' && (
@@ -116,7 +113,7 @@ export function DashboardLayout({ children }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-5xl mx-auto p-8">
+        <div key={location.pathname} className="max-w-5xl mx-auto p-8 animate-page-enter">
           {children}
         </div>
       </main>

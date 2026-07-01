@@ -35,7 +35,7 @@ const stats = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0ff] flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0f] text-[#f0f0ff] flex flex-col animate-page-enter">
       <PageMeta title="Home" />
 
       {/* Ambient glow blobs */}

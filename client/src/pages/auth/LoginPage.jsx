@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex">
+    <div className="min-h-screen bg-[#0a0a0f] flex animate-page-enter">
       <PageMeta title="Sign In" />
 
       {/* Left decorative panel */}

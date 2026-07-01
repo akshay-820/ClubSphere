@@ -4,7 +4,15 @@ import { PageMeta } from "../../components/PageMeta";
 import { Spinner } from "../../components/Spinner";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import api from "../../lib/api";
-import { Building2, Pencil, Trash2, Check, X, Globe } from "lucide-react";
+import {
+    Building2,
+    Pencil,
+    Trash2,
+    Check,
+    X,
+    Globe,
+    AlertTriangle,
+} from "lucide-react";
 
 export default function AdminCollegesPage() {
     const [colleges, setColleges] = useState([]);
@@ -18,9 +26,13 @@ export default function AdminCollegesPage() {
     });
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
 
     const fetchColleges = useCallback(() => {
         setLoading(true);
+        setError(""); // clear any stale error from a previous failed fetch
         api.get("/colleges")
             .then((res) => setColleges(res.data.colleges || []))
             .catch(() => setError("Failed to load colleges."))
@@ -65,19 +77,32 @@ export default function AdminCollegesPage() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (
-            !window.confirm(
-                "Are you sure you want to permanently delete this college?",
-            )
-        )
-            return;
+    const openDeleteModal = (college) => {
+        setDeleteError("");
+        setDeleteTarget(college);
+    };
+
+    const closeDeleteModal = () => {
+        if (deleting) return; // don't allow closing mid-request
+        setDeleteTarget(null);
+        setDeleteError("");
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
+        setDeleting(true);
+        setDeleteError("");
         try {
             // DELETE /colleges/:id
-            await api.delete(`/colleges/${id}`);
-            setColleges((prev) => prev.filter((c) => c.id !== id));
+            await api.delete(`/colleges/${deleteTarget.id}`);
+            setColleges((prev) => prev.filter((c) => c.id !== deleteTarget.id));
+            setDeleteTarget(null);
         } catch (err) {
-            setError(err.response?.data?.error || "Failed to delete college.");
+            setDeleteError(
+                err.response?.data?.error || "Failed to delete college.",
+            );
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -168,20 +193,27 @@ export default function AdminCollegesPage() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 pt-1">
+
+                                    {/* Save / Cancel — restyled for clearer visual hierarchy */}
+                                    <div className="flex gap-2.5 pt-1">
                                         <button
                                             onClick={() =>
                                                 handleSave(college.id)
                                             }
                                             disabled={saving}
-                                            className="btn-primary text-xs py-1.5 px-4 text-white"
+                                            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-green-500 text-white shadow-sm shadow-green-500/20 hover:bg-green-400 hover:shadow-green-500/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
                                         >
-                                            <Check className="w-3.5 h-3.5" />
+                                            {saving ? (
+                                                <Spinner size="xs" />
+                                            ) : (
+                                                <Check className="w-3.5 h-3.5" />
+                                            )}
                                             {saving ? "Saving..." : "Save"}
                                         </button>
                                         <button
                                             onClick={cancelEdit}
-                                            className="btn-ghost text-xs py-1.5 px-4"
+                                            disabled={saving}
+                                            className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg border border-[#2a2a4a] text-text-secondary hover:border-[#3a3a5a] hover:bg-white/5 hover:text-text-primary active:scale-[0.98] transition-all disabled:opacity-50"
                                         >
                                             <X className="w-3.5 h-3.5" />
                                             Cancel
@@ -222,7 +254,7 @@ export default function AdminCollegesPage() {
                                         </button>
                                         <button
                                             onClick={() =>
-                                                handleDelete(college.id)
+                                                openDeleteModal(college)
                                             }
                                             className="p-1.5 rounded-lg text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                                             title="Delete"
@@ -234,6 +266,62 @@ export default function AdminCollegesPage() {
                             )}
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Delete confirmation modal — sits in front of the whole page */}
+            {deleteTarget && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={closeDeleteModal}
+                >
+                    <div
+                        className="card w-full max-w-sm p-6 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-4.5 h-4.5 text-red-400" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="font-semibold text-text-primary text-sm">
+                                    Delete college?
+                                </p>
+                                <p className="text-sm text-text-secondary mt-1">
+                                    Are you sure you want to delete{" "}
+                                    <span className="text-text-primary font-medium">
+                                        {deleteTarget.name}
+                                    </span>
+                                    ? This can't be undone.
+                                </p>
+                            </div>
+                        </div>
+
+                        <ErrorAlert message={deleteError} />
+
+                        <div className="flex gap-2.5 mt-4">
+                            <button
+                                onClick={confirmDelete}
+                                disabled={deleting}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-red-500 text-white shadow-sm shadow-red-500/20 hover:bg-red-400 hover:shadow-red-500/30 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                {deleting ? (
+                                    <Spinner size="xs" />
+                                ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                )}
+                                {deleting ? "Deleting..." : "Yes, delete"}
+                            </button>
+                            <button
+                                onClick={closeDeleteModal}
+                                disabled={deleting}
+                                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg border border-[#2a2a4a] text-text-secondary hover:border-[#3a3a5a] hover:bg-white/5 hover:text-text-primary active:scale-[0.98] transition-all disabled:opacity-50"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </DashboardLayout>

@@ -42,7 +42,7 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6 animate-page-enter">
       <PageMeta title="Verify Email" />
 
       <div className="w-full max-w-sm">

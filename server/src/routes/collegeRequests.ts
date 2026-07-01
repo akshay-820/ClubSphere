@@ -11,7 +11,7 @@ const router = Router();
 
 router
     .route("/")
-    .post(isLoggedIn, requestCollegeCreation)
+    .post(requestCollegeCreation)
     .get(isLoggedIn, roleGuard("super_admin"), listCollegeRequests);
 
 router

@@ -5,7 +5,6 @@ import {
     getCollegeRequests,
     approveCollegeRequest,
 } from "../db/queries/collegeRequestQueries.js";
-import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getCollegeByEmailDomain } from "../db/queries/collegeQueries.js";
 import {
     getRouteParam,
@@ -15,16 +14,10 @@ import {
 
 // requests a new college to be created - flow = validate incoming data -> check if college already exists -> create a new college request
 const requestCollegeCreation = async (
-    req: AuthRequest,
+    req: express.Request,
     res: express.Response,
 ) => {
     try {
-        const userId = req.user?.userId;
-
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-
         const { college_name, email_domain, logo_url } = req.body;
         const collegeName = optionalTrimmedString(college_name);
         const emailDomain =
@@ -52,7 +45,6 @@ const requestCollegeCreation = async (
             college_name: collegeName,
             email_domain: emailDomain,
             logo_url: logoUrl,
-            requested_by: userId,
         });
 
         return res.status(201).json({
