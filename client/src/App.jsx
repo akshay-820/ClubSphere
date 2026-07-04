@@ -11,6 +11,9 @@ import FeedPage from './pages/FeedPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestCollegePage from './pages/RequestCollegePage'
 import EditCollegePage from './pages/college/EditCollegePage'
+import ClubRequestsPage from './pages/college/ClubRequestsPage'
+import ClubsPage from './pages/ClubsPage'
+import RequestClubPage from './pages/RequestClubPage'
 import AdminCollegesPage from './pages/admin/AdminCollegesPage'
 import AdminCollegeRequestsPage from './pages/admin/AdminCollegeRequestsPage'
 
@@ -34,11 +37,19 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            {/* College admin: edit their own college */}
+            <Route path="/clubs" element={<ClubsPage />} />
+            <Route path="/clubs/request" element={<RequestClubPage />} />
+
+            {/* College admin: edit their own college + club requests */}
             <Route
               element={<RequireRole roles={['college_admin', 'super_admin']} />}
             >
               <Route path="/colleges/:id/edit" element={<EditCollegePage />} />
+            </Route>
+
+            {/* College admin: club requests */}
+            <Route element={<RequireRole roles={['college_admin']} />}>
+              <Route path="/college/club-requests" element={<ClubRequestsPage />} />
             </Route>
 
             {/* Super Admin only */}

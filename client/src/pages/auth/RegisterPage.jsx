@@ -13,6 +13,8 @@ export default function RegisterPage() {
         email: "",
         password: "",
         college_id: "",
+        year: "",
+        branch: "",
     });
     const [colleges, setColleges] = useState([]);
     const [collegesLoading, setCollegesLoading] = useState(true);
@@ -45,7 +47,11 @@ export default function RegisterPage() {
                 email: form.email.trim().toLowerCase(),
                 password: form.password,
             };
-            if (form.college_id) payload.college_id = form.college_id;
+            if (form.college_id) {
+                payload.college_id = form.college_id;
+                if (form.year) payload.year = parseInt(form.year, 10);
+                if (form.branch) payload.branch = form.branch.trim();
+            }
 
             await api.post("/auth/register", payload);
             // Navigate to verify page carrying email via state
@@ -165,9 +171,6 @@ export default function RegisterPage() {
                                 className="block text-sm font-medium text-[#8888aa] mb-1.5"
                             >
                                 College
-                                <span className="text-[#555577] ml-1">
-                                    (optional)
-                                </span>
                             </label>
                             {collegesLoading ? (
                                 <div className="flex items-center gap-2 h-10 px-3">
@@ -192,6 +195,52 @@ export default function RegisterPage() {
                                         </option>
                                     ))}
                                 </select>
+                            )}
+
+                            {form.college_id && (
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label
+                                            htmlFor="year"
+                                            className="block text-sm font-medium text-[#8888aa] mb-1.5"
+                                        >
+                                            Year
+                                        </label>
+                                        <select
+                                            id="year"
+                                            value={form.year}
+                                            onChange={set("year")}
+                                            required
+                                            className="input-field"
+                                        >
+                                            <option value="">
+                                                Select year
+                                            </option>
+                                            <option value="1">1st Year</option>
+                                            <option value="2">2nd Year</option>
+                                            <option value="3">3rd Year</option>
+                                            <option value="4">4th Year</option>
+                                            <option value="5">5th Year</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            htmlFor="branch"
+                                            className="block text-sm font-medium text-[#8888aa] mb-1.5"
+                                        >
+                                            Branch
+                                        </label>
+                                        <input
+                                            id="branch"
+                                            type="text"
+                                            value={form.branch}
+                                            onChange={set("branch")}
+                                            required
+                                            placeholder="e.g. CSE"
+                                            className="input-field"
+                                        />
+                                    </div>
+                                </div>
                             )}
                         </div>
 

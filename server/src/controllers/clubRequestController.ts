@@ -93,7 +93,7 @@ const approveClubCreationRequest = async (
             club: result.club,
         });
     } catch (error) {
-        console.error("Error approving club request");
+        console.error("Error approving club request", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
@@ -111,7 +111,7 @@ const rejectClubCreationRequest = async (
             message: "Club request rejected successfully",
         });
     } catch (error) {
-        console.error("Error while rejecting the club request");
+        console.error("Error while rejecting the club request", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };

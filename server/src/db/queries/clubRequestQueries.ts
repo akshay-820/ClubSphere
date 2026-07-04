@@ -114,11 +114,30 @@ export async function approveClubRequest(id: string) {
             `,
             [id],
         );
+
+        const club = clubResult.rows[0];
+
+        //if accepted insert the user and club into membership table
+        await client.query(
+            `
+                INSERT INTO memberships(
+                    user_id, 
+                    club_id, 
+                    joined_at,
+                    ends_at,
+                    status,
+                    role
+                )
+                VALUES($1,$2,CURRENT_DATE,CURRENT_DATE + CAST($3 AS INTEGER),'active','president');
+            `,
+            [request.requested_by, club.id, club.membership_duration_days],
+        );
+
         await client.query("COMMIT");
 
         return {
             type: "approved" as const,
-            club: clubResult.rows[0],
+            club,
         };
     } catch (error) {
         await client.query("ROLLBACK");
