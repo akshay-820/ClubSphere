@@ -14,6 +14,7 @@ import EditCollegePage from './pages/college/EditCollegePage'
 import ClubRequestsPage from './pages/college/ClubRequestsPage'
 import ClubsPage from './pages/ClubsPage'
 import RequestClubPage from './pages/RequestClubPage'
+import EditClubPage from './pages/EditClubPage'
 import AdminCollegesPage from './pages/admin/AdminCollegesPage'
 import AdminCollegeRequestsPage from './pages/admin/AdminCollegeRequestsPage'
 
@@ -45,6 +46,7 @@ export default function App() {
               element={<RequireRole roles={['college_admin', 'super_admin']} />}
             >
               <Route path="/colleges/:id/edit" element={<EditCollegePage />} />
+              <Route path="/clubs/:id/edit" element={<EditClubPage />} />
             </Route>
 
             {/* College admin: club requests */}

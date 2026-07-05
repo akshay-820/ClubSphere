@@ -11,6 +11,15 @@ type updateClubInput = {
     membership_duration_days?: number;
 };
 
+export async function getClubById(id: string) {
+    const query = `
+        SELECT * FROM clubs
+        WHERE id = $1;
+    `;
+    const result = await pool.query(query, [id]);
+    return result.rows[0] ?? null;
+}
+
 //to only check if the club already exists in college, used while creating
 export async function findClubInCollege(college_id: string, club_name: string) {
     const query = `

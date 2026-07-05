@@ -4,7 +4,8 @@ import {
     updateClubDetails,
     deleteClubPerm,
 } from "../controllers/clubController.js";
-import { isLoggedIn, roleGuard } from "../middleware/authMiddleware.js";
+import { isLoggedIn } from "../middleware/authMiddleware.js";
+import { canDeleteClub, canUpdateClub } from "../middleware/clubMiddleware.js";
 
 const router = Router();
 
@@ -12,15 +13,7 @@ router.route("/").get(isLoggedIn, getClubs);
 
 router
     .route("/:id")
-    .patch(
-        isLoggedIn,
-        roleGuard("college_admin", "super_admin"),
-        updateClubDetails,
-    )
-    .delete(
-        isLoggedIn,
-        roleGuard("college_admin", "super_admin"),
-        deleteClubPerm,
-    );
+    .patch(isLoggedIn, canUpdateClub, updateClubDetails)
+    .delete(isLoggedIn, canDeleteClub, deleteClubPerm);
 
 export default router;
