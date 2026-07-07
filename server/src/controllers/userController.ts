@@ -3,6 +3,7 @@
 import express from "express";
 import { getUserById, updateUserProfile } from "../db/queries/userQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
+import { uploadImage } from "../utils/uploadImage.js";
 
 const getMyProfile = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -33,7 +34,19 @@ const updateMyProfile = async (req: AuthRequest, res: express.Response) => {
             return res.status(401).json({ error: "Unauthorized" });
         }
 
-        const { name, year, branch, avatar_url } = req.body;
+        const { name, year, branch } = req.body;
+
+        // If a file was uploaded, send it to Cloudinary and use the returned URL
+        let avatar_url: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/avatars",
+                userId,
+            );
+            avatar_url = result.secure_url;
+        }
+
         const user = await updateUserProfile(userId, {
             name,
             year,

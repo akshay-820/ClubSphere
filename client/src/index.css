@@ -165,4 +165,26 @@
   .animate-page-enter {
     animation: pageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
+
+  /* Image uploader drop zone */
+  .image-uploader-zone {
+    position: relative;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .image-uploader-zone:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 3px;
+  }
+
+  @keyframes uploaderPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+  }
+
+  .image-uploader-zone[data-uploading="true"] {
+    animation: uploaderPulse 1.4s ease-in-out infinite;
+    pointer-events: none;
+  }
 }

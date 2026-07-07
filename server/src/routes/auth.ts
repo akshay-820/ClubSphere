@@ -12,8 +12,9 @@ import {
     isLoggedIn,
     roleGuard,
 } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/upload.js";
 
-router.route("/register").post(registerUser);
+router.route("/register").post(upload.single("avatar"), registerUser);
 router.route("/register/verify").post(verifyRegistrationOtp);
 
 router.route("/login").post(loginUser);

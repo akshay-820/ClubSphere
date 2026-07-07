@@ -4,6 +4,7 @@ import { DashboardLayout } from "../components/DashboardLayout";
 import { PageMeta } from "../components/PageMeta";
 import { Spinner } from "../components/Spinner";
 import { ErrorAlert } from "../components/ErrorAlert";
+import { ImageUploader } from "../components/ImageUploader";
 import api from "../lib/api";
 import {
     Users,
@@ -12,7 +13,7 @@ import {
     Tag,
     FileText,
     DollarSign,
-    Link as LinkIcon,
+    Image as ImageIcon,
     Clock,
     UserCheck,
     ToggleLeft,
@@ -140,7 +141,11 @@ export default function EditClubPage() {
     const [fetchError, setFetchError] = useState("");
     const [form, setForm] = useState(null);
 
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
+
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [saved, setSaved] = useState(false);
 
@@ -156,6 +161,7 @@ export default function EditClubPage() {
                     name: found.name || "",
                     description: found.description || "",
                     category: found.category || "",
+                    // logo_url is stored for the live preview; actual upload uses logoFile
                     logo_url: found.logo_url || "",
                     membership_fee:
                         found.membership_fee != null
@@ -181,6 +187,18 @@ export default function EditClubPage() {
     const toggleAccepting = () =>
         setForm((f) => ({ ...f, accepting_members: !f.accepting_members }));
 
+    const handleLogoSelect = (file) => {
+        setLogoFile(file);
+        if (file) {
+            const blobUrl = URL.createObjectURL(file);
+            setLogoPreview(blobUrl);
+            // Update live preview hero immediately
+            setForm((f) => ({ ...f, logo_url: blobUrl }));
+        } else {
+            setLogoPreview(null);
+        }
+    };
+
     const selectedCat = CATEGORIES.find((c) => c.value === form?.category);
     const selectedReg = REG_TYPES.find(
         (r) => r.value === form?.registration_type,
@@ -192,26 +210,48 @@ export default function EditClubPage() {
         setSaved(false);
         setSaving(true);
         try {
-            const payload = {
-                name: form.name.trim() || undefined,
-                description: form.description.trim() || undefined,
-                category: form.category || undefined,
-                logo_url: form.logo_url.trim() || undefined,
-                membership_fee:
-                    form.membership_fee !== ""
-                        ? parseFloat(form.membership_fee)
-                        : undefined,
-                accepting_members: form.accepting_members,
-                registration_type: form.registration_type || undefined,
-                membership_duration_days:
-                    form.membership_duration_days !== ""
-                        ? parseInt(form.membership_duration_days)
-                        : undefined,
-            };
-            await api.patch(`/clubs/${id}`, payload);
+            if (logoFile) {
+                setUploading(true);
+                const fd = new FormData();
+                if (form.name.trim()) fd.append("name", form.name.trim());
+                if (form.description.trim()) fd.append("description", form.description.trim());
+                if (form.category) fd.append("category", form.category);
+                if (form.membership_fee !== "") fd.append("membership_fee", String(parseFloat(form.membership_fee)));
+                fd.append("accepting_members", String(form.accepting_members));
+                if (form.registration_type) fd.append("registration_type", form.registration_type);
+                if (form.membership_duration_days !== "") fd.append("membership_duration_days", String(parseInt(form.membership_duration_days)));
+                fd.append("logo", logoFile);
+
+                const res = await api.patch(`/clubs/${id}`, fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                setUploading(false);
+                // Update logo_url in form with the returned Cloudinary URL
+                setForm((f) => ({ ...f, logo_url: res.data.club?.logo_url || f.logo_url }));
+                setLogoFile(null);
+                setLogoPreview(null);
+            } else {
+                const payload = {
+                    name: form.name.trim() || undefined,
+                    description: form.description.trim() || undefined,
+                    category: form.category || undefined,
+                    membership_fee:
+                        form.membership_fee !== ""
+                            ? parseFloat(form.membership_fee)
+                            : undefined,
+                    accepting_members: form.accepting_members,
+                    registration_type: form.registration_type || undefined,
+                    membership_duration_days:
+                        form.membership_duration_days !== ""
+                            ? parseInt(form.membership_duration_days)
+                            : undefined,
+                };
+                await api.patch(`/clubs/${id}`, payload);
+            }
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
+            setUploading(false);
             setSaveError(err.response?.data?.error || "Failed to update club.");
         } finally {
             setSaving(false);
@@ -443,44 +483,25 @@ export default function EditClubPage() {
                     {/* Logo + Fee */}
                     <div className="grid sm:grid-cols-2 gap-4">
                         <div className="card p-6">
-                            <label
-                                htmlFor="edit-logo"
-                                className="flex items-center gap-2 text-sm font-semibold text-[#f0f0ff] mb-4"
-                            >
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[#f0f0ff] mb-4">
                                 <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                                    <LinkIcon className="w-3.5 h-3.5 text-amber-400" />
+                                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
                                 </div>
-                                Logo URL
-                            </label>
-                            <input
-                                id="edit-logo"
-                                type="url"
-                                value={form.logo_url}
-                                onChange={set("logo_url")}
-                                className="input-field"
-                                placeholder="https://..."
-                            />
-                            <div className="mt-3 flex items-center gap-3">
-                                {form.logo_url ? (
-                                    <img
-                                        src={form.logo_url}
-                                        alt="preview"
-                                        className="w-10 h-10 rounded-lg object-contain bg-white/5 border border-[#1e1e3a] p-1"
-                                        onError={(e) => {
-                                            e.target.style.display = "none";
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-dashed border-[#2a2a4a] flex items-center justify-center">
-                                        <Users className="w-4 h-4 text-[#333355]" />
-                                    </div>
-                                )}
-                                <span className="text-xs text-[#555577]">
-                                    {form.logo_url
-                                        ? "Live preview"
-                                        : "Paste a URL to preview"}
-                                </span>
+                                Club Logo
                             </div>
+                            <ImageUploader
+                                currentUrl={logoFile ? null : (form.logo_url || null)}
+                                onFileSelect={handleLogoSelect}
+                                shape="square"
+                                label="Drag & drop or click to upload club logo"
+                                uploading={uploading}
+                            />
+                            {logoFile && (
+                                <p className="mt-2 text-xs text-amber-300 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                                    Logo ready — save to upload.
+                                </p>
+                            )}
                         </div>
 
                         <div className="card p-6">
@@ -640,10 +661,14 @@ export default function EditClubPage() {
                     <div className="flex items-center gap-4 py-2">
                         <button
                             type="submit"
-                            disabled={saving}
+                            disabled={saving || uploading}
                             className="btn-primary text-sm py-3 px-8 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {saving ? (
+                            {uploading ? (
+                                <>
+                                    <Spinner size="xs" /> Uploading...
+                                </>
+                            ) : saving ? (
                                 <>
                                     <Spinner size="xs" /> Saving...
                                 </>

@@ -11,6 +11,7 @@ import {
     normalizeEmailDomain,
     optionalTrimmedString,
 } from "../utils/validation.js";
+import { uploadImage } from "../utils/uploadImage.js";
 
 // requests a new college to be created - flow = validate incoming data -> check if college already exists -> create a new college request
 const requestCollegeCreation = async (
@@ -18,13 +19,20 @@ const requestCollegeCreation = async (
     res: express.Response,
 ) => {
     try {
-        const { college_name, email_domain, logo_url } = req.body;
+        const { college_name, email_domain } = req.body;
         const collegeName = optionalTrimmedString(college_name);
         const emailDomain =
             typeof email_domain === "string"
                 ? normalizeEmailDomain(email_domain)
                 : "";
-        const logoUrl = typeof logo_url === "string" ? logo_url.trim() : "";
+        let logoUrl: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/college-logos",
+            );
+            logoUrl = result.secure_url;
+        }
 
         if (!collegeName || !emailDomain || !logoUrl) {
             return res.status(400).json({

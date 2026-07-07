@@ -16,6 +16,7 @@ import {
 } from "../db/queries/userPendingRegsQueries.js";
 import { generateOtp, hashOtp } from "../utils/otp.js";
 import { sendRegistrationOtpEmail } from "../utils/mailer.js";
+import { uploadImage } from "../utils/uploadImage.js";
 
 const setAuthCookie = (
     res: express.Response,
@@ -65,6 +66,14 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         const otpExpiresAt = new Date(Date.now() + 1000 * 60 * 10);
 
         //store the avatar in cloudinary and get the url
+        let avatar_url: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/avatars",
+            );
+            avatar_url = result.secure_url;
+        }
 
         await upsertPendingRegistration({
             name,
@@ -72,6 +81,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
             year,
             branch,
             password_hash: hashedPassword,
+            avatar_url,
             college_id,
             otp_hash: otpHash,
             otp_expires_at: otpExpiresAt,

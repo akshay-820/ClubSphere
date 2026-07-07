@@ -6,6 +6,7 @@ import {
     updateCollegeDetails,
 } from "../controllers/collegeController.js";
 import { isLoggedIn, roleGuard } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router
     .patch(
         isLoggedIn,
         roleGuard("super_admin", "college_admin"),
+        upload.single("logo"),
         updateCollegeDetails,
     )
     .delete(isLoggedIn, roleGuard("super_admin"), deleteCollegePerm);

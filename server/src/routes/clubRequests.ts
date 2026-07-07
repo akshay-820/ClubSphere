@@ -6,13 +6,14 @@ import {
     rejectClubCreationRequest,
 } from "../controllers/clubRequestController.js";
 import { isLoggedIn, roleGuard } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
 router
     .route("/")
     .get(isLoggedIn, roleGuard("college_admin"), listClubRequests)
-    .post(isLoggedIn, requestClubCreation);
+    .post(isLoggedIn, upload.single("logo"), requestClubCreation);
 
 router
     .route("/:id/approve")

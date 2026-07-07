@@ -11,8 +11,12 @@ import {
     normalizeEmailDomain,
     optionalTrimmedString,
 } from "../utils/validation.js";
+import { uploadImage } from "../utils/uploadImage.js";
 
-const getCollegeDetails = async (req: express.Request, res: express.Response) => {
+const getCollegeDetails = async (
+    req: express.Request,
+    res: express.Response,
+) => {
     try {
         const id = getRouteParam(req.params.id);
         const college = await getCollegeById(id);
@@ -42,8 +46,18 @@ const updateCollegeDetails = async (
 ) => {
     try {
         const id = getRouteParam(req.params.id);
-        const { name, email_domain, logo_url } = req.body;
+        const { name, email_domain } = req.body;
 
+        // If a file was uploaded, send it to Cloudinary and use the returned URL
+        let logo_url: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/college-logos",
+                id,
+            );
+            logo_url = result.secure_url;
+        }
         if (
             name === undefined &&
             email_domain === undefined &&
@@ -55,17 +69,12 @@ const updateCollegeDetails = async (
         }
 
         const trimmedName = optionalTrimmedString(name);
-        const trimmedLogoUrl = optionalTrimmedString(logo_url);
         const normalizedEmailDomain =
             typeof email_domain === "string"
                 ? normalizeEmailDomain(email_domain)
                 : undefined;
 
-        if (
-            trimmedName === "" ||
-            trimmedLogoUrl === "" ||
-            normalizedEmailDomain === ""
-        ) {
+        if (trimmedName === "" || normalizedEmailDomain === "") {
             return res
                 .status(400)
                 .json({ error: "College fields cannot be empty" });
@@ -74,7 +83,7 @@ const updateCollegeDetails = async (
         const college = await updateCollege(id, {
             name: trimmedName,
             email_domain: normalizedEmailDomain,
-            logo_url: trimmedLogoUrl,
+            logo_url,
         });
 
         if (!college) {
@@ -119,4 +128,9 @@ const deleteCollegePerm = async (
     }
 };
 
-export { deleteCollegePerm, getColleges, getCollegeDetails, updateCollegeDetails };
+export {
+    deleteCollegePerm,
+    getColleges,
+    getCollegeDetails,
+    updateCollegeDetails,
+};

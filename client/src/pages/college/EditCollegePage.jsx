@@ -4,6 +4,7 @@ import { DashboardLayout } from "../../components/DashboardLayout";
 import { PageMeta } from "../../components/PageMeta";
 import { Spinner } from "../../components/Spinner";
 import { ErrorAlert } from "../../components/ErrorAlert";
+import { ImageUploader } from "../../components/ImageUploader";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../lib/api";
 import {
@@ -30,9 +31,11 @@ export default function EditCollegePage() {
     const [form, setForm] = useState({
         name: "",
         email_domain: "",
-        logo_url: "",
     });
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [saveError, setSaveError] = useState("");
     const [saved, setSaved] = useState(false);
 
@@ -51,7 +54,6 @@ export default function EditCollegePage() {
                 setForm({
                     name: c.name,
                     email_domain: c.email_domain || "",
-                    logo_url: c.logo_url || "",
                 });
             })
             .catch((err) =>
@@ -65,18 +67,43 @@ export default function EditCollegePage() {
     const set = (key) => (e) =>
         setForm((f) => ({ ...f, [key]: e.target.value }));
 
+    const handleLogoSelect = (file) => {
+        setLogoFile(file);
+        setLogoPreview(file ? URL.createObjectURL(file) : null);
+    };
+
     const handleSave = async (e) => {
         e.preventDefault();
         setSaveError("");
         setSaving(true);
         setSaved(false);
         try {
-            const res = await api.patch(`/colleges/${id}`, form);
+            let res;
+
+            if (logoFile) {
+                setUploading(true);
+                const fd = new FormData();
+                fd.append("name", form.name);
+                if (form.email_domain)
+                    fd.append("email_domain", form.email_domain);
+                fd.append("logo", logoFile);
+
+                res = await api.patch(`/colleges/${id}`, fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                setUploading(false);
+            } else {
+                res = await api.patch(`/colleges/${id}`, form);
+            }
+
             setCollege(res.data.college);
+            setLogoFile(null);
+            setLogoPreview(null);
             setSaved(true);
             setEditing(false);
             setTimeout(() => setSaved(false), 3000);
         } catch (err) {
+            setUploading(false);
             setSaveError(
                 err.response?.data?.error || "Failed to update college.",
             );
@@ -89,8 +116,9 @@ export default function EditCollegePage() {
         setForm({
             name: college?.name || "",
             email_domain: college?.email_domain || "",
-            logo_url: college?.logo_url || "",
         });
+        setLogoFile(null);
+        setLogoPreview(null);
         setSaveError("");
         setEditing(false);
     };
@@ -113,6 +141,9 @@ export default function EditCollegePage() {
         );
     }
 
+    // Use local preview (blob) when available, else the saved URL
+    const displayLogo = logoPreview || college?.logo_url;
+
     return (
         <DashboardLayout>
             <PageMeta title="Edit College" />
@@ -130,14 +161,14 @@ export default function EditCollegePage() {
                 <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
 
                 <div className="relative p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    {college?.logo_url ? (
+                    {displayLogo ? (
                         <img
-                            src={college.logo_url}
+                            src={displayLogo}
                             alt={college.name}
-                            className="w-24 h-24 rounded-2xl object-contain bg-white/5 border border-[#1e1e3a] shadow-xl p-2"
+                            className="w-24 h-24 rounded-2xl object-contain bg-white/5 border border-[#1e1e3a] shadow-xl p-2 flex-shrink-0"
                         />
                     ) : (
-                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center shadow-xl">
+                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center shadow-xl flex-shrink-0">
                             <Building2 className="w-10 h-10 text-blue-400" />
                         </div>
                     )}
@@ -159,7 +190,7 @@ export default function EditCollegePage() {
                     {!editing && (
                         <button
                             onClick={() => setEditing(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-[#1e1e3a] text-sm text-[#8888aa] hover:text-[#f0f0ff] hover:border-[#2a2a4a] transition-all"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-[#1e1e3a] text-sm text-[#8888aa] hover:text-[#f0f0ff] hover:border-[#2a2a4a] transition-all flex-shrink-0"
                         >
                             <Pencil className="w-3.5 h-3.5" />
                             Edit Details
@@ -185,12 +216,13 @@ export default function EditCollegePage() {
 
                     <ErrorAlert message={saveError} />
 
-                    <form onSubmit={handleSave} className="space-y-5 mt-4">
+                    <form onSubmit={handleSave} className="space-y-6 mt-4">
+                        {/* Row 1: two matched text inputs, same height */}
                         <div className="grid sm:grid-cols-2 gap-5">
-                            <div className="sm:col-span-2">
+                            <div>
                                 <label
                                     htmlFor="college-name"
-                                    className="block text-sm font-medium text-[#8888aa] mb-1.5 flex items-center gap-1.5"
+                                    className="text-sm font-medium text-[#8888aa] mb-1.5 flex items-center gap-1.5"
                                 >
                                     <Building2 className="w-3.5 h-3.5" />{" "}
                                     College Name
@@ -209,7 +241,7 @@ export default function EditCollegePage() {
                             <div>
                                 <label
                                     htmlFor="college-domain"
-                                    className="block text-sm font-medium text-[#8888aa] mb-1.5 flex items-center gap-1.5"
+                                    className="text-sm font-medium text-[#8888aa] mb-1.5 flex items-center gap-1.5"
                                 >
                                     <Globe className="w-3.5 h-3.5" /> Email
                                     Domain
@@ -226,48 +258,36 @@ export default function EditCollegePage() {
                                     The domain used for institutional emails.
                                 </p>
                             </div>
+                        </div>
 
-                            <div>
-                                <label
-                                    htmlFor="college-logo"
-                                    className="block text-sm font-medium text-[#8888aa] mb-1.5 flex items-center gap-1.5"
-                                >
-                                    <Image className="w-3.5 h-3.5" /> Logo URL
-                                </label>
-                                <input
-                                    id="college-logo"
-                                    type="url"
-                                    value={form.logo_url}
-                                    onChange={set("logo_url")}
-                                    className="input-field"
-                                    placeholder="https://example.com/logo.png"
+                        {/* Row 2: logo uploader */}
+                        <div class="pb-4">
+                            <label className="text-sm font-medium text-[#8888aa] mb-3 flex items-center gap-1.5">
+                                <Image className="w-3.5 h-3.5" /> College Logo
+                            </label>
+                            <div className="w-36 h-36 sm:w-40 sm:h-40">
+                                <ImageUploader
+                                    currentUrl={college?.logo_url || null}
+                                    onFileSelect={handleLogoSelect}
+                                    shape="square"
+                                    label="Drag and drop or click to upload"
+                                    uploading={uploading}
                                 />
-                                {form.logo_url && (
-                                    <div className="mt-2 flex items-center gap-2 bg-white/5 p-2 rounded-lg border border-[#1e1e3a] w-fit">
-                                        <img
-                                            src={form.logo_url}
-                                            alt="Preview"
-                                            className="w-6 h-6 rounded object-contain"
-                                            onError={(e) => {
-                                                e.target.style.display = "none";
-                                            }}
-                                        />
-                                        <span className="text-xs text-[#8888aa]">
-                                            Live Preview
-                                        </span>
-                                    </div>
-                                )}
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3 pt-4 border-t border-[#1e1e3a]">
+                        <div className="flex items-center gap-3 pt-4">
                             <button
                                 type="submit"
-                                disabled={saving}
+                                disabled={saving || uploading}
                                 className="btn-primary text-sm py-2 px-5 text-white"
                             >
                                 <Save className="w-4 h-4" />
-                                {saving ? "Saving..." : "Save changes"}
+                                {uploading
+                                    ? "Uploading..."
+                                    : saving
+                                      ? "Saving..."
+                                      : "Save changes"}
                             </button>
                             <button
                                 type="button"
@@ -287,10 +307,10 @@ export default function EditCollegePage() {
                 </div>
             )}
 
-            {/* Optional: Read-only info cards when not editing */}
+            {/* Read-only info cards when not editing */}
             {!editing && (
                 <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="card p-5 bg-blue-500/5 border-[#1e1e3a]">
+                    <div className="card p-5 bg-blue-500/5 border-[#1e1e3a] flex flex-col justify-between min-h-[104px]">
                         <div className="flex items-center gap-2 mb-2">
                             <Globe className="w-5 h-5 text-blue-400" />
                             <p className="text-xs font-medium text-[#555577] uppercase tracking-wider">
@@ -301,16 +321,24 @@ export default function EditCollegePage() {
                             {college?.email_domain || "—"}
                         </p>
                     </div>
-                    <div className="card p-5 bg-purple-500/5 border-[#1e1e3a]">
+                    <div className="card p-5 bg-purple-500/5 border-[#1e1e3a] flex flex-col justify-between min-h-[104px]">
                         <div className="flex items-center gap-2 mb-2">
                             <Image className="w-5 h-5 text-purple-400" />
                             <p className="text-xs font-medium text-[#555577] uppercase tracking-wider">
-                                Logo URL
+                                Logo
                             </p>
                         </div>
-                        <p className="text-sm font-medium text-[#f0f0ff] truncate max-w-full">
-                            {college?.logo_url || "—"}
-                        </p>
+                        {college?.logo_url ? (
+                            <img
+                                src={college.logo_url}
+                                alt="Logo preview"
+                                className="h-10 w-auto object-contain rounded"
+                            />
+                        ) : (
+                            <p className="text-sm font-medium text-[#555577]">
+                                No logo set
+                            </p>
+                        )}
                     </div>
                 </div>
             )}

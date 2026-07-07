@@ -6,12 +6,13 @@ import {
     rejectCollegeCreationRequest,
 } from "../controllers/collegeRequestController.js";
 import { isLoggedIn, roleGuard } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/upload.js";
 
 const router = Router();
 
 router
     .route("/")
-    .post(requestCollegeCreation)
+    .post(upload.single("logo"), requestCollegeCreation)
     .get(isLoggedIn, roleGuard("super_admin"), listCollegeRequests);
 
 router

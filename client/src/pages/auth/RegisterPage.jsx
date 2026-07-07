@@ -5,6 +5,7 @@ import { PageMeta } from "../../components/PageMeta";
 import { PasswordInput } from "../../components/PasswordInput";
 import { ErrorAlert } from "../../components/ErrorAlert";
 import { Spinner } from "../../components/Spinner";
+import { ImageUploader } from "../../components/ImageUploader";
 import logo from "../../assets/logo.png";
 
 export default function RegisterPage() {
@@ -16,6 +17,7 @@ export default function RegisterPage() {
         year: "",
         branch: "",
     });
+    const [avatarFile, setAvatarFile] = useState(null);
     const [colleges, setColleges] = useState([]);
     const [collegesLoading, setCollegesLoading] = useState(true);
     const [error, setError] = useState("");
@@ -41,22 +43,41 @@ export default function RegisterPage() {
         setError("");
         setLoading(true);
         try {
-            // POST /auth/register — backend fields: name, email, password, college_id (optional)
-            const payload = {
-                name: form.name.trim(),
-                email: form.email.trim().toLowerCase(),
-                password: form.password,
-            };
-            if (form.college_id) {
-                payload.college_id = form.college_id;
-                if (form.year) payload.year = parseInt(form.year, 10);
-                if (form.branch) payload.branch = form.branch.trim();
+            if (avatarFile) {
+                // Send as multipart/form-data when avatar file is attached
+                const fd = new FormData();
+                fd.append("name", form.name.trim());
+                fd.append("email", form.email.trim().toLowerCase());
+                fd.append("password", form.password);
+                if (form.college_id) {
+                    fd.append("college_id", form.college_id);
+                    if (form.year)
+                        fd.append("year", String(parseInt(form.year, 10)));
+                    if (form.branch) fd.append("branch", form.branch.trim());
+                }
+                fd.append("avatar", avatarFile);
+
+                await api.post("/auth/register", fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+            } else {
+                // POST /auth/register — backend fields: name, email, password, college_id (optional)
+                const payload = {
+                    name: form.name.trim(),
+                    email: form.email.trim().toLowerCase(),
+                    password: form.password,
+                };
+                if (form.college_id) {
+                    payload.college_id = form.college_id;
+                    if (form.year) payload.year = parseInt(form.year, 10);
+                    if (form.branch) payload.branch = form.branch.trim();
+                }
+                await api.post("/auth/register", payload);
             }
 
-            await api.post("/auth/register", payload);
             // Navigate to verify page carrying email via state
             navigate("/verify-otp", {
-                state: { email: payload.email },
+                state: { email: form.email.trim().toLowerCase() },
                 replace: true,
             });
         } catch (err) {
@@ -68,6 +89,17 @@ export default function RegisterPage() {
             setLoading(false);
         }
     };
+
+    // Derive initials for the avatar placeholder
+    const initials = form.name
+        ? form.name
+              .trim()
+              .split(" ")
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase()
+        : null;
 
     return (
         <div className="min-h-screen bg-[#0a0a0f] flex animate-page-enter">
@@ -123,6 +155,35 @@ export default function RegisterPage() {
                     <ErrorAlert message={error} />
 
                     <form onSubmit={handleSubmit} className="space-y-5 mt-4">
+                        {/* Avatar upload — sits at the top, optional */}
+                        <div className="flex flex-col items-center gap-2">
+                            {/* Avatar preview circle */}
+                            <div className="relative">
+                                <ImageUploader
+                                    currentUrl={null}
+                                    onFileSelect={setAvatarFile}
+                                    shape="circle"
+                                    label="Upload avatar"
+                                    maxMB={5}
+                                />
+                                {/* Initials placeholder shown when no file and name typed */}
+                                {!avatarFile && initials && (
+                                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold pointer-events-none">
+                                        {initials}
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-[#555577]">
+                                {avatarFile ? (
+                                    <span className="text-blue-400">
+                                        {avatarFile.name}
+                                    </span>
+                                ) : (
+                                    "Profile photo — click or drag"
+                                )}
+                            </p>
+                        </div>
+
                         <div>
                             <label
                                 htmlFor="name"

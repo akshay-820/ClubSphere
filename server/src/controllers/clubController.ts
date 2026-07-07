@@ -6,7 +6,7 @@ import {
 } from "../db/queries/clubQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
-import { error } from "node:console";
+import { uploadImage } from "../utils/uploadImage.js";
 
 const getClubs = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -38,12 +38,22 @@ const updateClubDetails = async (req: AuthRequest, res: express.Response) => {
             name,
             description,
             category,
-            logo_url,
             membership_fee,
             accepting_members,
             registration_type,
             membership_duration_days,
         } = req.body;
+
+        // If a file was uploaded, send it to Cloudinary and use the returned URL
+        let logo_url: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/club-logos",
+                id,
+            );
+            logo_url = result.secure_url;
+        }
 
         if (
             name === undefined &&

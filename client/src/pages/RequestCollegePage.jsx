@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { PageMeta } from "../components/PageMeta";
 import { ErrorAlert } from "../components/ErrorAlert";
+import { ImageUploader } from "../components/ImageUploader";
 import api from "../lib/api";
 import {
     Building2,
@@ -39,16 +40,22 @@ export default function RequestCollegePage() {
     const [form, setForm] = useState({
         college_name: "",
         email_domain: "",
-        logo_url: "",
     });
+
+    // Logo is handled separately as a File object
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
+
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
-    const [logoError, setLogoError] = useState(false);
 
-    const set = (key) => (e) => {
-        if (key === "logo_url") setLogoError(false);
-        setForm((f) => ({ ...f, [key]: e.target.value }));
+    const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+    const handleLogoSelect = (file) => {
+        setLogoFile(file);
+        setLogoPreview(file ? URL.createObjectURL(file) : null);
     };
 
     const domainValid = useMemo(() => {
@@ -59,19 +66,30 @@ export default function RequestCollegePage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
+
+        if (!logoFile) {
+            setError("A college logo image is required.");
+            return;
+        }
+
         setLoading(true);
+        setUploading(true);
         try {
-            // POST /college-requests
-            await api.post("/college-requests", {
-                college_name: form.college_name.trim(),
-                email_domain: form.email_domain.trim(),
-                logo_url: form.logo_url.trim(),
+            // POST /college-requests — send as multipart/form-data with 'logo' file
+            const fd = new FormData();
+            fd.append("college_name", form.college_name.trim());
+            fd.append("email_domain", form.email_domain.trim());
+            fd.append("logo", logoFile);
+
+            await api.post("/college-requests", fd, {
+                headers: { "Content-Type": "multipart/form-data" },
             });
             setSuccess(true);
         } catch (err) {
             setError(err.response?.data?.error || "Failed to submit request.");
         } finally {
             setLoading(false);
+            setUploading(false);
         }
     };
 
@@ -164,19 +182,29 @@ export default function RequestCollegePage() {
                         <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
 
                         <div className="relative p-8 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-500/30 flex items-center justify-center shadow-xl">
-                                <Building2 className="w-10 h-10 text-blue-400" />
+                            {/* Live logo preview in hero */}
+                            <div className="w-20 h-20 rounded-2xl border border-blue-500/30 flex items-center justify-center shadow-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20">
+                                {logoPreview ? (
+                                    <img
+                                        src={logoPreview}
+                                        alt="Logo preview"
+                                        className="w-full h-full object-contain"
+                                    />
+                                ) : (
+                                    <Building2 className="w-10 h-10 text-blue-400" />
+                                )}
                             </div>
 
                             <div className="flex-1 min-w-0">
                                 <h1 className="text-2xl font-bold text-[#f0f0ff] mb-2">
-                                    Request a new college
+                                    {form.college_name || "Request a new college"}
                                 </h1>
                                 <p className="text-sm text-[#8888aa] max-w-lg leading-relaxed">
-                                    Don't see your campus on ClubSphere yet? Add
-                                    its details below. Once our team approves
-                                    it, students with a matching email domain
-                                    can join and start clubs right away.
+                                    {form.college_name
+                                        ? form.email_domain
+                                            ? `@${form.email_domain}`
+                                            : "Add your email domain below"
+                                        : "Don't see your campus on ClubSphere yet? Add its details below. Once our team approves it, students with a matching email domain can join and start clubs right away."}
                                 </p>
                             </div>
                         </div>
@@ -257,44 +285,53 @@ export default function RequestCollegePage() {
                                     </p>
                                 </div>
 
+                                {/* Logo upload — required */}
                                 <div>
-                                    <label
-                                        htmlFor="logo"
-                                        className="block text-sm font-medium text-[#8888aa] mb-2 flex items-center gap-1.5"
-                                    >
-                                        <Image className="w-4 h-4" /> Logo URL
+                                    <label className="block text-sm font-medium text-[#8888aa] mb-3 flex items-center gap-1.5">
+                                        <Image className="w-4 h-4" /> College
+                                        Logo
+                                        <span className="ml-auto text-red-400 text-xs font-normal">
+                                            Required
+                                        </span>
                                     </label>
-                                    <input
-                                        id="logo"
-                                        type="url"
-                                        required
-                                        value={form.logo_url}
-                                        onChange={set("logo_url")}
-                                        placeholder="https://example.com/logo.png"
-                                        className="input-field py-2.5"
+                                    <ImageUploader
+                                        currentUrl={null}
+                                        onFileSelect={handleLogoSelect}
+                                        shape="square"
+                                        label="Drag & drop or click to upload college logo"
+                                        uploading={uploading}
                                     />
-                                    <p className="text-xs text-[#555577] mt-1.5">
-                                        A direct link to a square logo image
-                                        works best — preview it on the right.
-                                    </p>
+                                    {logoFile && (
+                                        <p className="mt-2 text-xs text-green-400 flex items-center gap-1">
+                                            <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
+                                            {logoFile.name} — ready to submit.
+                                        </p>
+                                    )}
+                                    {!logoFile && (
+                                        <p className="mt-1.5 text-xs text-[#555577]">
+                                            A square logo image works best.
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="pt-4 border-t border-[#1e1e3a] flex justify-end">
                                     <button
                                         type="submit"
-                                        disabled={loading}
-                                        className="btn-primary py-2.5 px-6 text-white text-sm shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-60"
+                                        disabled={loading || !logoFile}
+                                        className="btn-primary py-2.5 px-6 text-white text-sm shadow-lg shadow-blue-500/20 flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
                                         <Send className="w-4 h-4" />
-                                        {loading
-                                            ? "Submitting request..."
-                                            : "Submit request"}
+                                        {uploading
+                                            ? "Uploading logo..."
+                                            : loading
+                                              ? "Submitting request..."
+                                              : "Submit request"}
                                     </button>
                                 </div>
                             </form>
                         </div>
 
-                        {/* Live preview */}
+                        {/* Live preview sidebar */}
                         <div className="lg:sticky lg:top-6 space-y-4">
                             <div className="card p-5">
                                 <p className="text-xs font-medium text-[#666688] uppercase tracking-wide mb-4 flex items-center gap-1.5">
@@ -304,14 +341,11 @@ export default function RequestCollegePage() {
 
                                 <div className="rounded-xl border border-[#1e1e3a] bg-white/[0.02] p-4 flex items-center gap-3">
                                     <div className="w-11 h-11 rounded-lg bg-white/5 border border-[#1e1e3a] flex items-center justify-center overflow-hidden shrink-0">
-                                        {form.logo_url && !logoError ? (
+                                        {logoPreview ? (
                                             <img
-                                                src={form.logo_url}
+                                                src={logoPreview}
                                                 alt="Logo preview"
                                                 className="w-full h-full object-contain"
-                                                onError={() =>
-                                                    setLogoError(true)
-                                                }
                                             />
                                         ) : (
                                             <Building2 className="w-5 h-5 text-[#555577]" />

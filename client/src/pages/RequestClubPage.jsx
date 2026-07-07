@@ -4,6 +4,7 @@ import { DashboardLayout } from "../components/DashboardLayout";
 import { PageMeta } from "../components/PageMeta";
 import { Spinner } from "../components/Spinner";
 import { ErrorAlert } from "../components/ErrorAlert";
+import { ImageUploader } from "../components/ImageUploader";
 import api from "../lib/api";
 import {
     Users,
@@ -12,7 +13,7 @@ import {
     Tag,
     FileText,
     DollarSign,
-    Link as LinkIcon,
+    Image as ImageIcon,
     ChevronRight,
     Zap,
     Palette,
@@ -99,12 +100,22 @@ export default function RequestClubPage() {
         membership_fee: "",
     });
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+
+    // Logo is handled as a File object, not a URL
+    const [logoFile, setLogoFile] = useState(null);
+    const [logoPreview, setLogoPreview] = useState(null);
 
     const set = (key) => (e) =>
         setForm((f) => ({ ...f, [key]: e.target.value }));
     const setCategory = (val) => setForm((f) => ({ ...f, category: val }));
+
+    const handleLogoSelect = (file) => {
+        setLogoFile(file);
+        setLogoPreview(file ? URL.createObjectURL(file) : null);
+    };
 
     const selectedCat = CATEGORIES.find((c) => c.value === form.category);
 
@@ -113,18 +124,34 @@ export default function RequestClubPage() {
         setError("");
         setLoading(true);
         try {
-            await api.post("/club-requests", {
-                name: form.name.trim(),
-                description: form.description.trim() || undefined,
-                category: form.category,
-                logo_url: form.logo_url.trim() || undefined,
-                membership_fee:
-                    form.membership_fee !== ""
-                        ? parseFloat(form.membership_fee)
-                        : undefined,
-            });
+            if (logoFile) {
+                // Send as multipart/form-data when a logo file is attached
+                setUploading(true);
+                const fd = new FormData();
+                fd.append("name", form.name.trim());
+                if (form.description.trim()) fd.append("description", form.description.trim());
+                fd.append("category", form.category);
+                if (form.membership_fee !== "") fd.append("membership_fee", String(parseFloat(form.membership_fee)));
+                fd.append("logo", logoFile);
+
+                await api.post("/club-requests", fd, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                setUploading(false);
+            } else {
+                await api.post("/club-requests", {
+                    name: form.name.trim(),
+                    description: form.description.trim() || undefined,
+                    category: form.category,
+                    membership_fee:
+                        form.membership_fee !== ""
+                            ? parseFloat(form.membership_fee)
+                            : undefined,
+                });
+            }
             setSuccess(true);
         } catch (err) {
+            setUploading(false);
             setError(err.response?.data?.error || "Failed to submit request.");
         } finally {
             setLoading(false);
@@ -195,9 +222,10 @@ export default function RequestClubPage() {
                                     name: "",
                                     description: "",
                                     category: "",
-                                    logo_url: "",
                                     membership_fee: "",
                                 });
+                                setLogoFile(null);
+                                setLogoPreview(null);
                             }}
                             className="btn-ghost text-sm px-6 py-2.5"
                         >
@@ -400,52 +428,32 @@ export default function RequestClubPage() {
                         </div>
                     </div>
 
-                    {/* Logo URL + Membership Fee */}
+                    {/* Logo + Membership Fee */}
                     <div className="grid sm:grid-cols-2 gap-4">
-                        {/* Logo URL */}
+                        {/* Logo Upload */}
                         <div className="card p-6">
-                            <label
-                                htmlFor="club-logo"
-                                className="flex items-center gap-2 text-sm font-semibold text-[#f0f0ff] mb-4"
-                            >
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[#f0f0ff] mb-4">
                                 <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                                    <LinkIcon className="w-3.5 h-3.5 text-amber-400" />
+                                    <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
                                 </div>
-                                Logo URL
+                                Club Logo
                                 <span className="text-[#555577] text-xs ml-auto font-normal">
                                     Optional
                                 </span>
-                            </label>
-                            <input
-                                id="club-logo"
-                                type="url"
-                                value={form.logo_url}
-                                onChange={set("logo_url")}
-                                className="input-field"
-                                placeholder="https://..."
-                            />
-                            {/* Live preview */}
-                            <div className="mt-3 flex items-center gap-3">
-                                {form.logo_url ? (
-                                    <img
-                                        src={form.logo_url}
-                                        alt="Logo preview"
-                                        className="w-10 h-10 rounded-lg object-contain bg-white/5 border border-[#1e1e3a] p-1"
-                                        onError={(e) => {
-                                            e.target.style.display = "none";
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-white/5 border border-dashed border-[#2a2a4a] flex items-center justify-center">
-                                        <Users className="w-4 h-4 text-[#333355]" />
-                                    </div>
-                                )}
-                                <span className="text-xs text-[#555577]">
-                                    {form.logo_url
-                                        ? "Logo preview"
-                                        : "Paste a URL to preview"}
-                                </span>
                             </div>
+                            <ImageUploader
+                                currentUrl={null}
+                                onFileSelect={handleLogoSelect}
+                                shape="square"
+                                label="Drag & drop or click to upload club logo"
+                                uploading={uploading}
+                            />
+                            {logoFile && (
+                                <p className="mt-2 text-xs text-amber-300 flex items-center gap-1">
+                                    <CheckCircle className="w-3 h-3 flex-shrink-0" />
+                                    Logo ready — will be uploaded on submit.
+                                </p>
+                            )}
                         </div>
 
                         {/* Membership Fee */}
@@ -497,14 +505,11 @@ export default function RequestClubPage() {
                                 Preview
                             </p>
                             <div className="flex items-center gap-3">
-                                {form.logo_url ? (
+                                {logoPreview ? (
                                     <img
-                                        src={form.logo_url}
+                                        src={logoPreview}
                                         alt="preview"
                                         className="w-10 h-10 rounded-lg object-contain bg-white/5 border border-white/10 p-1 flex-shrink-0"
-                                        onError={(e) => {
-                                            e.target.style.display = "none";
-                                        }}
                                     />
                                 ) : (
                                     <div
@@ -544,11 +549,16 @@ export default function RequestClubPage() {
                         <button
                             type="submit"
                             disabled={
-                                loading || !form.name.trim() || !form.category
+                                loading || uploading || !form.name.trim() || !form.category
                             }
                             className="btn-primary text-sm py-3 px-8 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                            {loading ? (
+                            {uploading ? (
+                                <>
+                                    <Spinner size="xs" />
+                                    Uploading logo...
+                                </>
+                            ) : loading ? (
                                 <>
                                     <Spinner size="xs" />
                                     Submitting...

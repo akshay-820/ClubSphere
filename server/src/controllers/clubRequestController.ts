@@ -8,6 +8,7 @@ import {
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam, optionalTrimmedString } from "../utils/validation.js";
 import { findClubInCollege } from "../db/queries/clubQueries.js";
+import { uploadImage } from "../utils/uploadImage.js";
 
 const requestClubCreation = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -19,8 +20,7 @@ const requestClubCreation = async (req: AuthRequest, res: express.Response) => {
         if (!collegeId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
-        const { name, description, category, logo_url, membership_fee } =
-            req.body;
+        const { name, description, category, membership_fee } = req.body;
 
         if (!name || !category) {
             return res.status(400).json({
@@ -33,6 +33,15 @@ const requestClubCreation = async (req: AuthRequest, res: express.Response) => {
             return res.status(408).json({
                 error: "Club with this name already exists in the College",
             });
+        }
+
+        let logo_url: string | undefined = undefined;
+        if (req.file) {
+            const result = await uploadImage(
+                req.file.buffer,
+                "clubsphere/club-logos",
+            );
+            logo_url = result.secure_url;
         }
 
         const clubRequest = await createClubRequest({
