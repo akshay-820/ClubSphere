@@ -3,11 +3,13 @@ import {
     getAllClubs,
     updateClub,
     deleteClub,
+    getClubById,
 } from "../db/queries/clubQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
 import { uploadImage } from "../utils/uploadImage.js";
 
+//get all clubs in a college
 const getClubs = async (req: AuthRequest, res: express.Response) => {
     try {
         const collegeId = req.user?.collegeId;
@@ -26,6 +28,7 @@ const getClubs = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
+//edit club details
 const updateClubDetails = async (req: AuthRequest, res: express.Response) => {
     try {
         const id = getRouteParam(req.params.id);
@@ -96,6 +99,7 @@ const updateClubDetails = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
+//delete club
 const deleteClubPerm = async (req: AuthRequest, res: express.Response) => {
     try {
         const id = getRouteParam(req.params.id);
@@ -121,4 +125,22 @@ const deleteClubPerm = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export { getClubs, updateClubDetails, deleteClubPerm };
+const getClubDetailsById = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const id = getRouteParam(req.params.id);
+        const club = await getClubById(id);
+        if (!club) {
+            return res.status(404).json({ error: "Club not found" });
+        }
+        return res.status(200).json({
+            club,
+        });
+    } catch (err) {
+        console.error("Error getting club details", err);
+        return res.status(500).json({
+            error: "Internal server error",
+        });
+    }
+};
+
+export { getClubs, updateClubDetails, deleteClubPerm, getClubDetailsById };

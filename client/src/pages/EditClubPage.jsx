@@ -99,9 +99,9 @@ const CATEGORIES = [
 
 const REG_TYPES = [
     {
-        value: "open",
-        label: "Open",
-        desc: "Anyone can join instantly, no approval needed",
+        value: "paid",
+        label: "Paid",
+        desc: "Requires a membership fee to join",
         icon: Unlock,
         active: "bg-green-500/15 border-green-500/50 text-green-300",
         inactive:
@@ -110,9 +110,9 @@ const REG_TYPES = [
         dot: "bg-green-500",
     },
     {
-        value: "approval",
-        label: "Approval Required",
-        desc: "Admin reviews and approves each join request",
+        value: "recruiting",
+        label: "Recruiting",
+        desc: "Actively looking for new members",
         icon: ClipboardCheck,
         active: "bg-amber-500/15 border-amber-500/50 text-amber-300",
         inactive:
@@ -121,9 +121,9 @@ const REG_TYPES = [
         dot: "bg-amber-500",
     },
     {
-        value: "invite",
-        label: "Invite Only",
-        desc: "Only members you invite can join",
+        value: "both",
+        label: "Both",
+        desc: "Paid membership and actively recruiting",
         icon: Lock,
         active: "bg-rose-500/15 border-rose-500/50 text-rose-300",
         inactive:
@@ -248,8 +248,7 @@ export default function EditClubPage() {
                 };
                 await api.patch(`/clubs/${id}`, payload);
             }
-            setSaved(true);
-            setTimeout(() => setSaved(false), 3000);
+            navigate(`/clubs/${id}`);
         } catch (err) {
             setUploading(false);
             setSaveError(err.response?.data?.error || "Failed to update club.");

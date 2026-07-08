@@ -13,8 +13,33 @@ type updateClubInput = {
 
 export async function getClubById(id: string) {
     const query = `
-        SELECT * FROM clubs
-        WHERE id = $1;
+        SELECT
+            c.id,
+            c.name,
+            c.description,
+            c.category,
+            c.logo_url,
+            c.college_id,
+            c.membership_fee,
+            c.registration_type,
+            c.membership_duration_days,
+            c.accepting_members,
+            c.created_by,
+            cl.name AS college_name,
+            u.name AS created_by,
+            COUNT(m.user_id) AS total_members
+        FROM clubs c
+        JOIN colleges cl
+        ON cl.id = c.college_id
+        JOIN users u
+        ON u.id = c.created_by
+        LEFT JOIN memberships m
+        ON m.club_id = c.id
+        WHERE c.id = $1
+        GROUP BY
+            c.id,
+            cl.name,
+            u.name;
     `;
     const result = await pool.query(query, [id]);
     return result.rows[0] ?? null;

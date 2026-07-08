@@ -3,6 +3,7 @@ import {
     getClubs,
     updateClubDetails,
     deleteClubPerm,
+    getClubDetailsById,
 } from "../controllers/clubController.js";
 import { isLoggedIn } from "../middleware/authMiddleware.js";
 import { canDeleteClub, canUpdateClub } from "../middleware/clubMiddleware.js";
@@ -14,6 +15,7 @@ router.route("/").get(isLoggedIn, getClubs);
 
 router
     .route("/:id")
+    .get(isLoggedIn, getClubDetailsById)
     .patch(isLoggedIn, canUpdateClub, upload.single("logo"), updateClubDetails)
     .delete(isLoggedIn, canDeleteClub, deleteClubPerm);
 

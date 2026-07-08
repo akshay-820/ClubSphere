@@ -37,9 +37,13 @@ function getCategoryStyle(category) {
 
 // Club Card
 function ClubCard({ club, canManage, onEdit, onDelete }) {
+  const navigate = useNavigate()
   const style = getCategoryStyle(club.category)
   return (
-    <div className={`card p-5 bg-gradient-to-br ${style.gradient} border ${style.border} transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-col gap-4`}>
+    <div 
+      onClick={() => navigate(`/clubs/${club.id}`)}
+      className={`card p-5 bg-gradient-to-br ${style.gradient} border ${style.border} transition-all duration-200 hover:shadow-lg hover:shadow-black/20 flex flex-col gap-4 cursor-pointer`}
+    >
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0">
           {club.logo_url ? (
@@ -63,10 +67,14 @@ function ClubCard({ club, canManage, onEdit, onDelete }) {
 
         {canManage && (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={() => onEdit(club)} className="p-1.5 rounded-lg text-[#555577] hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Edit club">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onEdit(club); }} 
+              className="p-1.5 rounded-lg text-[#555577] hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Edit club">
               <Pencil className="w-3.5 h-3.5" />
             </button>
-            <button onClick={() => onDelete(club)} className="p-1.5 rounded-lg text-[#555577] hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Delete club">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onDelete(club); }} 
+              className="p-1.5 rounded-lg text-[#555577] hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Delete club">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>

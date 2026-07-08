@@ -13,6 +13,7 @@ import RequestCollegePage from './pages/RequestCollegePage'
 import EditCollegePage from './pages/college/EditCollegePage'
 import ClubRequestsPage from './pages/college/ClubRequestsPage'
 import ClubsPage from './pages/ClubsPage'
+import ClubProfilePage from './pages/ClubProfilePage'
 import RequestClubPage from './pages/RequestClubPage'
 import EditClubPage from './pages/EditClubPage'
 import AdminCollegesPage from './pages/admin/AdminCollegesPage'
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/clubs" element={<ClubsPage />} />
+            <Route path="/clubs/:id" element={<ClubProfilePage />} />
             <Route path="/clubs/request" element={<RequestClubPage />} />
 
             {/* College admin: edit their own college + club requests */}
