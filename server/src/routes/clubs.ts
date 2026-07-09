@@ -9,6 +9,11 @@ import {
 import { isLoggedIn } from "../middleware/authMiddleware.js";
 import { canDeleteClub, canUpdateClub } from "../middleware/clubMiddleware.js";
 import { upload } from "../middleware/upload.js";
+import {
+    addMemberInClub,
+    removeMemberInClub,
+    showAllMembers,
+} from "../controllers/membershipController.js";
 
 const router = Router();
 
@@ -23,4 +28,10 @@ router
 router
     .route("/:id/search-users")
     .get(isLoggedIn, canUpdateClub, searchUsersToAdd);
+
+router
+    .route("/:id/members")
+    .get(isLoggedIn, showAllMembers)
+    .post(isLoggedIn, canUpdateClub, addMemberInClub)
+    .delete(isLoggedIn, canUpdateClub, removeMemberInClub);
 export default router;

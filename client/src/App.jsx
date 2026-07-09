@@ -41,6 +41,7 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/clubs" element={<ClubsPage />} />
             <Route path="/clubs/:id" element={<ClubProfilePage />} />
+            <Route path="/clubs/:id/edit" element={<EditClubPage />} />
             <Route path="/clubs/request" element={<RequestClubPage />} />
 
             {/* College admin: edit their own college + club requests */}
@@ -48,7 +49,6 @@ export default function App() {
               element={<RequireRole roles={['college_admin', 'super_admin']} />}
             >
               <Route path="/colleges/:id/edit" element={<EditCollegePage />} />
-              <Route path="/clubs/:id/edit" element={<EditClubPage />} />
             </Route>
 
             {/* College admin: club requests */}

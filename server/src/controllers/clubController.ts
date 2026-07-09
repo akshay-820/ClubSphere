@@ -9,6 +9,7 @@ import {
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
 import { uploadImage } from "../utils/uploadImage.js";
+import { getUserRoleInClub } from "../db/queries/membershipQueries.js";
 
 //get all clubs in a college
 const getClubs = async (req: AuthRequest, res: express.Response) => {
@@ -129,12 +130,18 @@ const deleteClubPerm = async (req: AuthRequest, res: express.Response) => {
 const getClubDetailsById = async (req: AuthRequest, res: express.Response) => {
     try {
         const id = getRouteParam(req.params.id);
+        const userId = req.user?.userId;
         const club = await getClubById(id);
         if (!club) {
             return res.status(404).json({ error: "Club not found" });
         }
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const userRoleInClub = await getUserRoleInClub(userId, id);
         return res.status(200).json({
             club,
+            userRoleInClub,
         });
     } catch (err) {
         console.error("Error getting club details", err);
