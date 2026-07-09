@@ -113,3 +113,29 @@ export async function deleteClub(id: string, college_id: string) {
     const result = await pool.query(query, [id, college_id]);
     return result.rows[0] ?? null;
 }
+
+//search users inside the club route - to add members
+export async function searchNonMembers(
+    name: string,
+    collegeId: string,
+    clubId: string,
+) {
+    const query = `
+        SELECT u.id,u.name,u.email,u.avatar_url
+        FROM users u
+        WHERE
+            u.name ILIKE $1 || '%'
+            AND u.college_id = $2
+            AND NOT EXISTS (
+                SELECT 1
+                FROM memberships m
+                WHERE m.user_id = u.id
+                    AND m.club_id = $3
+            ) 
+        ORDER BY u.name
+        LIMIT 10;
+    `;
+
+    const result = await pool.query(query, [name, collegeId, clubId]);
+    return result.rows;
+}

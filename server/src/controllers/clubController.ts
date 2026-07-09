@@ -4,6 +4,7 @@ import {
     updateClub,
     deleteClub,
     getClubById,
+    searchNonMembers,
 } from "../db/queries/clubQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
@@ -143,4 +144,32 @@ const getClubDetailsById = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export { getClubs, updateClubDetails, deleteClubPerm, getClubDetailsById };
+const searchUsersToAdd = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const collegeId = req.user?.collegeId;
+        if (!collegeId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const clubId = getRouteParam(req.params.id);
+        const name = req.query.name;
+        if (typeof name !== "string" || name.trim().length < 2) {
+            return res.status(200).json({ users: [] });
+        }
+        const users = await searchNonMembers(name, collegeId, clubId);
+        if (!users) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        return res.status(200).json({ users });
+    } catch (err) {
+        console.error("Error while searching user", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export {
+    getClubs,
+    updateClubDetails,
+    deleteClubPerm,
+    getClubDetailsById,
+    searchUsersToAdd,
+};

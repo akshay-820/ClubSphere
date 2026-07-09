@@ -118,3 +118,22 @@ export async function updateUserProfile(
         throw error;
     }
 }
+
+export async function searchUserByName(collegeId: string, name: string) {
+    const query = `
+        SELECT id,name,email,avatar_url
+        FROM users
+        WHERE college_id = $1 
+            AND name ILIKE $2 || '%'
+        ORDER BY name
+        LIMIT 10;
+    `;
+
+    try {
+        const result = await pool.query(query, [collegeId, name.trim()]);
+        return result.rows;
+    } catch (err) {
+        console.error("Error finding users by name:", err);
+        throw err;
+    }
+}

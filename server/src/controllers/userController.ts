@@ -1,9 +1,14 @@
 //getMyProfile and updateMyProfile functions
 
 import express from "express";
-import { getUserById, updateUserProfile } from "../db/queries/userQueries.js";
+import {
+    getUserById,
+    searchUserByName,
+    updateUserProfile,
+} from "../db/queries/userQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { uploadImage } from "../utils/uploadImage.js";
+import { error } from "console";
 
 const getMyProfile = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -68,4 +73,26 @@ const updateMyProfile = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export { getMyProfile, updateMyProfile };
+const searchUser = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const collegeId = req.user?.collegeId;
+        if (!collegeId) {
+            return res.status(401).json({ error: "Cannot search" });
+        }
+        const q = req.query.name;
+        if (typeof q !== "string" || q.trim().length < 2) {
+            return res.status(200).json({ users: [] });
+        }
+
+        const users = await searchUserByName(collegeId, q);
+        if (!users) {
+            return res.status(200).json({ users });
+        }
+        return res.status(200).json({ users });
+    } catch (err) {
+        console.error("Error while searching user:", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export { getMyProfile, updateMyProfile, searchUser };
