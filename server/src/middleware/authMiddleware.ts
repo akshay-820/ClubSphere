@@ -57,29 +57,4 @@ const roleGuard = (...allowedRoles: UserRole[]) => {
     };
 };
 
-const clubRoleGuard = (...allowedRoles: clubRole[]) => {
-    return async (
-        req: AuthRequest,
-        res: express.Response,
-        next: express.NextFunction,
-    ) => {
-        if (!req.user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const userId = req.user?.userId;
-        const clubId = req.params.id;
-
-        if (!clubId || typeof clubId !== "string") {
-            return res.status(400).json({ error: "Invalid club id" });
-        }
-
-        const userRole = await getUserRoleInClub(userId, clubId);
-        if (!allowedRoles.includes(userRole)) {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        next();
-    };
-};
-
-export { isLoggedIn, roleGuard, clubRoleGuard };
+export { isLoggedIn, roleGuard };

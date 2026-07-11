@@ -214,12 +214,22 @@ export default function EditClubPage() {
                 setUploading(true);
                 const fd = new FormData();
                 if (form.name.trim()) fd.append("name", form.name.trim());
-                if (form.description.trim()) fd.append("description", form.description.trim());
+                if (form.description.trim())
+                    fd.append("description", form.description.trim());
                 if (form.category) fd.append("category", form.category);
-                if (form.membership_fee !== "") fd.append("membership_fee", String(parseFloat(form.membership_fee)));
+                if (form.membership_fee !== "")
+                    fd.append(
+                        "membership_fee",
+                        String(parseFloat(form.membership_fee)),
+                    );
                 fd.append("accepting_members", String(form.accepting_members));
-                if (form.registration_type) fd.append("registration_type", form.registration_type);
-                if (form.membership_duration_days !== "") fd.append("membership_duration_days", String(parseInt(form.membership_duration_days)));
+                if (form.registration_type)
+                    fd.append("registration_type", form.registration_type);
+                if (form.membership_duration_days !== "")
+                    fd.append(
+                        "membership_duration_days",
+                        String(parseInt(form.membership_duration_days)),
+                    );
                 fd.append("logo", logoFile);
 
                 const res = await api.patch(`/clubs/${id}`, fd, {
@@ -227,7 +237,10 @@ export default function EditClubPage() {
                 });
                 setUploading(false);
                 // Update logo_url in form with the returned Cloudinary URL
-                setForm((f) => ({ ...f, logo_url: res.data.club?.logo_url || f.logo_url }));
+                setForm((f) => ({
+                    ...f,
+                    logo_url: res.data.club?.logo_url || f.logo_url,
+                }));
                 setLogoFile(null);
                 setLogoPreview(null);
             } else {
@@ -489,7 +502,9 @@ export default function EditClubPage() {
                                 Club Logo
                             </div>
                             <ImageUploader
-                                currentUrl={logoFile ? null : (form.logo_url || null)}
+                                currentUrl={
+                                    logoFile ? null : form.logo_url || null
+                                }
                                 onFileSelect={handleLogoSelect}
                                 shape="square"
                                 label="Drag & drop or click to upload club logo"

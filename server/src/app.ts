@@ -8,10 +8,12 @@ import userRoutes from "./routes/users.js";
 import cookieParser from "cookie-parser";
 import clubRequestsRoutes from "./routes/clubRequests.js";
 import clubRoutes from "./routes/clubs.js";
+import paymentRoutes from "./routes/payments.js";
 
 const app = express();
 
 app.use(cookieParser());
+app.use("/payments/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ credentials: true, origin: true }));
@@ -22,6 +24,7 @@ app.use("/colleges", collegeRoutes);
 app.use("/college-requests", collegeRequestsRoutes);
 app.use("/club-requests", clubRequestsRoutes);
 app.use("/clubs", clubRoutes);
+app.use("/payments", paymentRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");
