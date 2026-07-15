@@ -56,14 +56,15 @@ export async function createPost(request: postContent) {
     return result.rows[0];
 }
 
-export async function getPostById(postId: string) {
+export async function getPostById(postId: string, collegeId: string) {
     const query = `
         SELECT c.name AS club_name,p.id,p.club_id,p.type,p.title,p.content,p.created_at,p.media_urls
         FROM posts p
         JOIN clubs c on c.id = p.club_id
-        WHERE p.id = $1;
+        WHERE p.id = $1 
+            AND c.college_id = $2;
     `;
-    const result = await pool.query(query, [postId]);
+    const result = await pool.query(query, [postId, collegeId]);
     return result.rows[0];
 }
 

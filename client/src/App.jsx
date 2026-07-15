@@ -8,6 +8,10 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import VerifyOtpPage from './pages/auth/VerifyOtpPage'
 import FeedPage from './pages/FeedPage'
+import PostsPage from './pages/PostsPage'
+import PostDetailPage from './pages/PostDetailPage'
+import CreatePostPage from './pages/CreatePostPage'
+import EditPostPage from './pages/EditPostPage'
 import ProfilePage from './pages/ProfilePage'
 import RequestCollegePage from './pages/RequestCollegePage'
 import EditCollegePage from './pages/college/EditCollegePage'
@@ -39,9 +43,13 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/posts" element={<PostsPage />} />
+            <Route path="/posts/:id" element={<PostDetailPage />} />
             <Route path="/clubs" element={<ClubsPage />} />
             <Route path="/clubs/:id" element={<ClubProfilePage />} />
             <Route path="/clubs/:id/edit" element={<EditClubPage />} />
+            <Route path="/clubs/:id/posts/create" element={<CreatePostPage />} />
+            <Route path="/clubs/:id/posts/:postId/edit" element={<EditPostPage />} />
             <Route path="/clubs/request" element={<RequestClubPage />} />
 
             {/* College admin: edit their own college + club requests */}

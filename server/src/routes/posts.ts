@@ -6,6 +6,6 @@ const router = Router();
 
 router.route("/").get(isLoggedIn, getAllPosts);
 
-router.route("/:id").get(getPostDetails);
+router.route("/:id").get(isLoggedIn, getPostDetails);
 
 export default router;

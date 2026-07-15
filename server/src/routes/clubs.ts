@@ -45,7 +45,7 @@ router
 router
     .route("/:id/posts")
     .get(getClubPosts)
-    .post(isLoggedIn, canUpdateClub, createNewPost);
+    .post(isLoggedIn, canUpdateClub, upload.array("media"), createNewPost);
 
 router
     .route("/:id/posts/:postId")

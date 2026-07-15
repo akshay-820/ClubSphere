@@ -10,6 +10,7 @@ import {
     updatePostById,
 } from "../db/queries/postQueries.js";
 import { uploadImage } from "../utils/uploadImage.js";
+import { getUserById } from "../db/queries/userQueries.js";
 
 const getClubPosts = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -43,7 +44,13 @@ const getAllPosts = async (req: AuthRequest, res: express.Response) => {
 const getPostDetails = async (req: AuthRequest, res: express.Response) => {
     try {
         const postId = getRouteParam(req.params.id);
-        const post = await getPostById(postId);
+        const collegeId = req.user?.collegeId;
+        if (!collegeId) {
+            return res
+                .status(403)
+                .json({ error: "Join a college to view posts" });
+        }
+        const post = await getPostById(postId, collegeId);
         if (!post) {
             return res.status(404).json({ error: "Post not found" });
         }

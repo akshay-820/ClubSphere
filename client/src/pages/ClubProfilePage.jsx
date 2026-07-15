@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useCallback, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { DashboardLayout } from "../components/DashboardLayout";
 import { PageMeta } from "../components/PageMeta";
 import { Spinner } from "../components/Spinner";
 import { ErrorAlert } from "../components/ErrorAlert";
+import { PostMediaCarousel } from "../components/PostMediaCarousel";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import {
@@ -19,6 +21,12 @@ import {
     X,
     Trash2,
     CreditCard,
+    Megaphone,
+    FileText,
+    Clock,
+    ChevronDown,
+    ChevronUp,
+    Newspaper,
 } from "lucide-react";
 
 const loadRazorpayCheckout = () => {
@@ -48,13 +56,29 @@ const loadRazorpayCheckout = () => {
 export default function ClubProfilePage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user } = useAuth();
 
     const [club, setClub] = useState(null);
     const [userRoleInClub, setUserRoleInClub] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState("Overview");
+
+    // Initialise tab from ?tab= query param (used by create/edit post redirects)
+    const tabFromQuery = searchParams.get("tab");
+    const validTabs = [
+        "Overview",
+        "Members",
+        "Events",
+        "Posts",
+        "Gallery",
+        "About",
+    ];
+    const initialTab =
+        validTabs.find(
+            (t) => t.toLowerCase() === tabFromQuery?.toLowerCase(),
+        ) || "Overview";
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     // Members Tab State
     const [members, setMembers] = useState([]);
@@ -81,6 +105,12 @@ export default function ClubProfilePage() {
     const [paymentLoading, setPaymentLoading] = useState(false);
     const [paymentError, setPaymentError] = useState("");
 
+    // Posts Tab State
+    const [posts, setPosts] = useState([]);
+    const [loadingPosts, setLoadingPosts] = useState(false);
+    const [postMenuOpenId, setPostMenuOpenId] = useState(null);
+    const [expandedPosts, setExpandedPosts] = useState({});
+
     useEffect(() => {
         const fetchClubDetails = async () => {
             try {
@@ -104,13 +134,7 @@ export default function ClubProfilePage() {
         }
     }, [id]);
 
-    useEffect(() => {
-        if (activeTab === "Members" && id) {
-            fetchMembers();
-        }
-    }, [activeTab, id]);
-
-    const fetchMembers = async () => {
+    const fetchMembers = useCallback(async () => {
         try {
             setLoadingMembers(true);
             const res = await api.get(`/clubs/${id}/members`);
@@ -123,12 +147,59 @@ export default function ClubProfilePage() {
         } finally {
             setLoadingMembers(false);
         }
+    }, [id]);
+
+    const fetchPosts = useCallback(async () => {
+        try {
+            setLoadingPosts(true);
+            const res = await api.get(`/clubs/${id}/posts`);
+            setPosts(res.data.posts || []);
+        } catch (err) {
+            console.error("Error fetching posts:", err);
+        } finally {
+            setLoadingPosts(false);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        const loadTabData = window.setTimeout(() => {
+            if (activeTab === "Members" && id) {
+                fetchMembers();
+            }
+            if (activeTab === "Posts" && id) {
+                fetchPosts();
+            }
+        }, 0);
+
+        return () => window.clearTimeout(loadTabData);
+    }, [activeTab, fetchMembers, fetchPosts, id]);
+
+    const handleDeletePost = (postId) => {
+        setConfirmDialog({
+            isOpen: true,
+            message:
+                "Are you sure you want to delete this post? This action cannot be undone.",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    await api.delete(`/clubs/${id}/posts/${postId}`);
+                    setPosts((prev) => prev.filter((p) => p.id !== postId));
+                    setSuccessMessage("Post deleted successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    alert(err.response?.data?.error || "Failed to delete post");
+                }
+            },
+        });
     };
 
     useEffect(() => {
         if (searchQuery.trim().length < 2) {
-            setSearchResults([]);
-            return;
+            const resetSearch = window.setTimeout(() => {
+                setSearchResults([]);
+            }, 0);
+
+            return () => window.clearTimeout(resetSearch);
         }
         const delayDebounceFn = setTimeout(async () => {
             try {
@@ -386,6 +457,20 @@ export default function ClubProfilePage() {
                                                 Edit Profile
                                             </button>
                                         )}
+                                        {(isPresident || isAdmin) && (
+                                            <button
+                                                onClick={() => {
+                                                    setShowMenu(false);
+                                                    navigate(
+                                                        `/clubs/${id}/posts/create`,
+                                                    );
+                                                }}
+                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252932] hover:text-white transition-colors"
+                                            >
+                                                <Newspaper className="w-4 h-4" />
+                                                Create Post
+                                            </button>
+                                        )}
                                         {canManageMembers && (
                                             <button
                                                 onClick={() => {
@@ -601,9 +686,260 @@ export default function ClubProfilePage() {
                             )}
                         </div>
                     )}
-                    {["Events", "Posts", "Gallery", "About"].includes(
-                        activeTab,
-                    ) && (
+                    {activeTab === "Posts" && (
+                        <div className="space-y-4">
+                            {/* Header row with post count */}
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm text-[#555577]">
+                                    {posts.length > 0
+                                        ? `${posts.length} post${posts.length !== 1 ? "s" : ""}`
+                                        : ""}
+                                </p>
+                                {(isPresident || isAdmin) && (
+                                    <button
+                                        onClick={() =>
+                                            navigate(
+                                                `/clubs/${id}/posts/create`,
+                                            )
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-medium transition-colors"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        New Post
+                                    </button>
+                                )}
+                            </div>
+
+                            {loadingPosts ? (
+                                <div className="flex justify-center p-8">
+                                    <Spinner className="w-8 h-8 text-blue-500" />
+                                </div>
+                            ) : posts.length === 0 ? (
+                                <div className="text-center py-16">
+                                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#1a1a2e] border border-[#1e1e3a] flex items-center justify-center">
+                                        <Newspaper className="w-6 h-6 text-[#555577]" />
+                                    </div>
+                                    <p className="text-sm font-medium text-[#f0f0ff] mb-1">
+                                        No posts yet
+                                    </p>
+                                    <p className="text-xs text-[#555577]">
+                                        {isPresident || isAdmin
+                                            ? "Create the first post for this club."
+                                            : "This club hasn't posted anything yet."}
+                                    </p>
+                                </div>
+                            ) : (
+                                posts.map((post) => {
+                                    const POST_TYPE_META = {
+                                        announcement: {
+                                            label: "Announcement",
+                                            icon: Megaphone,
+                                            cls: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+                                            bar: "bg-blue-400",
+                                        },
+                                        recruitment: {
+                                            label: "Recruitment",
+                                            icon: Users,
+                                            cls: "bg-green-500/10 text-green-400 border-green-500/20",
+                                            bar: "bg-green-400",
+                                        },
+                                        general: {
+                                            label: "General",
+                                            icon: FileText,
+                                            cls: "bg-gray-500/10 text-gray-400 border-gray-500/20",
+                                            bar: "bg-gray-400",
+                                        },
+                                    };
+                                    const meta =
+                                        POST_TYPE_META[post.type] ||
+                                        POST_TYPE_META.general;
+                                    const TypeIcon = meta.icon;
+                                    const CHAR_LIMIT = 280;
+                                    const isExpanded = expandedPosts[post.id];
+                                    const isTruncatable =
+                                        post.content.length > CHAR_LIMIT;
+                                    const displayContent =
+                                        !isExpanded && isTruncatable
+                                            ? post.content.slice(
+                                                  0,
+                                                  CHAR_LIMIT,
+                                              ) + "…"
+                                            : post.content;
+                                    const mediaUrls = Array.isArray(
+                                        post.media_urls,
+                                    )
+                                        ? post.media_urls
+                                        : [];
+                                    const relTime = (() => {
+                                        const diff =
+                                            Date.now() -
+                                            new Date(post.created_at).getTime();
+                                        const s = Math.floor(diff / 1000);
+                                        if (s < 60) return `${s}s ago`;
+                                        const m = Math.floor(s / 60);
+                                        if (m < 60) return `${m}m ago`;
+                                        const h = Math.floor(m / 60);
+                                        if (h < 24) return `${h}h ago`;
+                                        const d = Math.floor(h / 24);
+                                        if (d < 30) return `${d}d ago`;
+                                        return new Date(
+                                            post.created_at,
+                                        ).toLocaleDateString();
+                                    })();
+
+                                    return (
+                                        <article
+                                            key={post.id}
+                                            className="overflow-hidden rounded-2xl border border-[#252546] bg-[#11111d] transition-all duration-200 hover:border-[#36365f]"
+                                        >
+                                            <div className="flex">
+                                                {/* Left accent bar */}
+                                                <div
+                                                    className={`w-1.5 shrink-0 ${meta.bar} opacity-80`}
+                                                />
+                                                <div className="min-w-0 flex-1 p-5 sm:p-6">
+                                                    {/* Meta row */}
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${meta.cls}`}
+                                                            >
+                                                                <TypeIcon className="w-3 h-3" />
+                                                                {meta.label}
+                                                            </span>
+                                                            <span className="flex items-center gap-1 text-xs text-[#555577]">
+                                                                <Clock className="w-3 h-3" />
+                                                                {relTime}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Three-dot menu for post */}
+                                                        {(isPresident ||
+                                                            isAdmin) && (
+                                                            <div className="relative">
+                                                                <button
+                                                                    onClick={() =>
+                                                                        setPostMenuOpenId(
+                                                                            postMenuOpenId ===
+                                                                                post.id
+                                                                                ? null
+                                                                                : post.id,
+                                                                        )
+                                                                    }
+                                                                    onBlur={() =>
+                                                                        setTimeout(
+                                                                            () =>
+                                                                                setPostMenuOpenId(
+                                                                                    null,
+                                                                                ),
+                                                                            200,
+                                                                        )
+                                                                    }
+                                                                    className="p-1.5 text-[#555577] hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                                                >
+                                                                    <MoreVertical className="w-4 h-4" />
+                                                                </button>
+                                                                {postMenuOpenId ===
+                                                                    post.id && (
+                                                                    <div className="absolute right-0 mt-1 w-36 bg-[#1C1F26] border border-gray-800 rounded-xl shadow-2xl py-1 z-50">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setPostMenuOpenId(
+                                                                                    null,
+                                                                                );
+                                                                                navigate(
+                                                                                    `/clubs/${id}/posts/${post.id}/edit`,
+                                                                                );
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#252932] hover:text-white transition-colors"
+                                                                        >
+                                                                            <Pencil className="w-3.5 h-3.5" />
+                                                                            Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setPostMenuOpenId(
+                                                                                    null,
+                                                                                );
+                                                                                handleDeletePost(
+                                                                                    post.id,
+                                                                                );
+                                                                            }}
+                                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                            Delete
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Title */}
+                                                    <h3
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/posts/${post.id}`,
+                                                            )
+                                                        }
+                                                        className="text-lg font-semibold text-[#f0f0ff] leading-snug mb-3 cursor-pointer hover:text-blue-400 transition-colors"
+                                                    >
+                                                        {post.title}
+                                                    </h3>
+
+                                                    {/* Content */}
+                                                    <p className="text-[15px] text-[#b2b2ce] leading-relaxed whitespace-pre-line">
+                                                        {displayContent}
+                                                    </p>
+
+                                                    {isTruncatable && (
+                                                        <button
+                                                            onClick={() =>
+                                                                setExpandedPosts(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [post.id]:
+                                                                            !prev[
+                                                                                post
+                                                                                    .id
+                                                                            ],
+                                                                    }),
+                                                                )
+                                                            }
+                                                            className="mt-1.5 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                                                        >
+                                                            {isExpanded ? (
+                                                                <>
+                                                                    <ChevronUp className="w-3 h-3" />
+                                                                    Show less
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronDown className="w-3 h-3" />
+                                                                    Read more
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+
+                                                    <PostMediaCarousel
+                                                        mediaUrls={mediaUrls}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </article>
+                                    );
+                                })
+                            )}
+                        </div>
+                    )}
+                    {activeTab === "Overview" && (
+                        <p className="text-gray-500 italic">
+                            Overview content coming soon.
+                        </p>
+                    )}
+                    {["Events", "Gallery", "About"].includes(activeTab) && (
                         <p className="text-gray-500 italic">
                             Content for {activeTab} will go here.
                         </p>
@@ -704,37 +1040,39 @@ export default function ClubProfilePage() {
             )}
 
             {/* Confirm Dialog Modal */}
-            {confirmDialog.isOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-[#12141D] border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6">
-                        <h3 className="text-lg font-semibold text-white mb-3">
-                            Confirm Action
-                        </h3>
-                        <p className="text-gray-300 text-sm mb-6">
-                            {confirmDialog.message}
-                        </p>
-                        <div className="flex items-center justify-end gap-3">
-                            <button
-                                onClick={() =>
-                                    setConfirmDialog((prev) => ({
-                                        ...prev,
-                                        isOpen: false,
-                                    }))
-                                }
-                                className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmDialog.onConfirm}
-                                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
-                            >
-                                Delete
-                            </button>
+            {confirmDialog.isOpen &&
+                createPortal(
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div className="bg-[#12141D] border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6">
+                            <h3 className="text-lg font-semibold text-white mb-3">
+                                Confirm Action
+                            </h3>
+                            <p className="text-gray-300 text-sm mb-6">
+                                {confirmDialog.message}
+                            </p>
+                            <div className="flex items-center justify-end gap-3">
+                                <button
+                                    onClick={() =>
+                                        setConfirmDialog((prev) => ({
+                                            ...prev,
+                                            isOpen: false,
+                                        }))
+                                    }
+                                    className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmDialog.onConfirm}
+                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </div>,
+                    document.body,
+                )}
 
             {/* Toast Notification (MacBook style) */}
             {successMessage && (

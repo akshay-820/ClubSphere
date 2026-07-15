@@ -25,6 +25,7 @@ export default defineConfig({
       '/club-requests':    { target: 'http://localhost:3000', changeOrigin: true, bypass },
       '/clubs':            { target: 'http://localhost:3000', changeOrigin: true, bypass },
       '/payments':         { target: 'http://localhost:3000', changeOrigin: true, bypass },
+      '/posts':            { target: 'http://localhost:3000', changeOrigin: true, bypass },
     },
   },
 })
