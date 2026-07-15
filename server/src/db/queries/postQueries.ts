@@ -67,27 +67,39 @@ export async function getPostById(postId: string) {
     return result.rows[0];
 }
 
-export async function deletePostById(postId: string) {
+export async function deletePostById(postId: string, clubId: string) {
     const query = `
         DELETE FROM posts
-        WHERE id = $1;
-        RETURNING id,club_id,type,title,content,created_at,media_urls
+        WHERE id = $1
+            AND club_id = $2
+        RETURNING id,club_id,type,title,content,created_at,media_urls;
     `;
-    const result = await pool.query(query, [postId]);
+    const result = await pool.query(query, [postId, clubId]);
     return result.rows[0];
 }
 
-export async function updatePostById(request: postUpdateType, postId: string) {
+export async function updatePostById(
+    request: postUpdateType,
+    postId: string,
+    clubId: string,
+) {
     const query = `
         UPDATE posts
         SET 
-            type = COALESCE($2,type),
-            title = COALESCE($3,title),
-            content = COALESCE($4,content)
+            type = COALESCE($3,type),
+            title = COALESCE($4,title),
+            content = COALESCE($5,content)
         WHERE id = $1
+            AND club_id = $2
         RETURNING id,club_id,type,title,content,created_at,media_urls;
     `;
-    const values = [postId, request.type, request.title, request.content];
+    const values = [
+        postId,
+        clubId,
+        request.type,
+        request.title,
+        request.content,
+    ];
     const result = await pool.query(query, values);
     return result.rows[0];
 }

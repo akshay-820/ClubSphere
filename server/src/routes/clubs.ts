@@ -14,6 +14,12 @@ import {
     removeMemberInClub,
     showAllMembers,
 } from "../controllers/membershipController.js";
+import {
+    createNewPost,
+    deletePost,
+    getClubPosts,
+    updatePost,
+} from "../controllers/postController.js";
 
 const router = Router();
 
@@ -34,4 +40,16 @@ router
     .get(isLoggedIn, showAllMembers)
     .post(isLoggedIn, canUpdateClub, addMemberInClub)
     .delete(isLoggedIn, canUpdateClub, removeMemberInClub);
+
+//for posts CRUD
+router
+    .route("/:id/posts")
+    .get(getClubPosts)
+    .post(isLoggedIn, canUpdateClub, createNewPost);
+
+router
+    .route("/:id/posts/:postId")
+    .patch(isLoggedIn, canUpdateClub, updatePost)
+    .delete(isLoggedIn, canUpdateClub, deletePost);
+
 export default router;

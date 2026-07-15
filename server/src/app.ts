@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import clubRequestsRoutes from "./routes/clubRequests.js";
 import clubRoutes from "./routes/clubs.js";
 import paymentRoutes from "./routes/payments.js";
+import postRoutes from "./routes/posts.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/college-requests", collegeRequestsRoutes);
 app.use("/club-requests", clubRequestsRoutes);
 app.use("/clubs", clubRoutes);
 app.use("/payments", paymentRoutes);
+app.use("/posts", postRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");

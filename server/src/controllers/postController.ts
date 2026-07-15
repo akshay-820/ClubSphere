@@ -111,7 +111,8 @@ const createNewPost = async (req: AuthRequest, res: express.Response) => {
 
 const updatePost = async (req: AuthRequest, res: express.Response) => {
     try {
-        const postId = getRouteParam(req.params.id);
+        const postId = getRouteParam(req.params.postId);
+        const clubId = getRouteParam(req.params.id);
 
         const { type, title, content } = req.body;
 
@@ -136,7 +137,11 @@ const updatePost = async (req: AuthRequest, res: express.Response) => {
             });
         }
 
-        const post = await updatePostById({ type, title, content }, postId);
+        const post = await updatePostById(
+            { type, title, content },
+            postId,
+            clubId,
+        );
         if (!post) {
             return res.status(404).json({
                 error: "Post not found",
@@ -155,9 +160,10 @@ const updatePost = async (req: AuthRequest, res: express.Response) => {
 
 const deletePost = async (req: AuthRequest, res: express.Response) => {
     try {
-        const postId = getRouteParam(req.params.id);
+        const postId = getRouteParam(req.params.postId);
+        const clubId = getRouteParam(req.params.id);
 
-        const post = await deletePostById(postId);
+        const post = await deletePostById(postId, clubId);
         if (!post) {
             return res.status(404).json({
                 error: "Post not found",
