@@ -1,0 +1,8 @@
+ALTER TABLE events
+ALTER COLUMN description SET NOT NULL;
+
+ALTER TABLE events
+ALTER COLUMN banner_url SET NOT NULL;
+
+ALTER TABLE events
+ALTER COLUMN location SET NOT NULL;
