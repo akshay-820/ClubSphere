@@ -20,6 +20,12 @@ import {
     getClubPosts,
     updatePost,
 } from "../controllers/postController.js";
+import {
+    cancelEvent,
+    createEvent,
+    editEvent,
+    getClubEvents,
+} from "../controllers/eventController.js";
 
 const router = Router();
 
@@ -51,5 +57,19 @@ router
     .route("/:id/posts/:postId")
     .patch(isLoggedIn, canUpdateClub, updatePost)
     .delete(isLoggedIn, canUpdateClub, deletePost);
+
+//for events - get,edit,create
+router
+    .route("/:id/events")
+    .get(isLoggedIn, getClubEvents)
+    .post(isLoggedIn, canUpdateClub, upload.single("banner"), createEvent);
+
+router
+    .route("/:id/events/:eventId")
+    .patch(isLoggedIn, canUpdateClub, upload.single("banner"), editEvent);
+
+router
+    .route("/:id/events/:eventId/cancel")
+    .patch(isLoggedIn, canUpdateClub, cancelEvent);
 
 export default router;

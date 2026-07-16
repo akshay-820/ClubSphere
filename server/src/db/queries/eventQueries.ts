@@ -25,7 +25,6 @@ type editEventContent = {
     location?: string;
     max_participants?: number;
     registration_fee?: number;
-    status?: eventStatus;
 };
 
 export async function getEventsByCollege(collegeId: string) {
@@ -112,8 +111,7 @@ export async function editEventById(
             end_time = COALESCE($8,end_time),
             location = COALESCE($9,location),
             max_participants = COALESCE($10,max_participants),
-            registration_fee = COALESCE($11,registration_fee),
-            status = COALESCE($12,status)
+            registration_fee = COALESCE($11,registration_fee)
         WHERE id = $1
             AND club_id = $2
         RETURNING id,title,description,event_type,banner_url,start_time,end_time,location,max_participants,registration_fee,club_id,created_at,status;
@@ -130,7 +128,6 @@ export async function editEventById(
         request.location,
         request.max_participants,
         request.registration_fee,
-        request.status,
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -142,11 +139,13 @@ export async function editEventStatus(
     status: eventStatus,
 ) {
     const query = `
-        UPDATE events
+        UPDATE events e
         SET status = $3
-        WHERE id = $1
-            AND club_id = $2
-        RETURNING id,title,description,event_type,banner_url,status;
+        FROM clubs c
+        WHERE e.id = $1
+            AND e.club_id = $2
+            AND c.id = e.club_id
+        RETURNING e.id,e.title,e.description,e.event_type,e.banner_url,e.status,c.name as club_name;
     `;
     const result = await pool.query(query, [eventId, clubId, status]);
     return result.rows[0];

@@ -4,11 +4,17 @@ import { getRouteParam } from "../utils/validation.js";
 import {
     createEventByClub,
     editEventById,
+    editEventStatus,
     getEventById,
     getEventsByClub,
     getEventsByCollege,
 } from "../db/queries/eventQueries.js";
 import { uploadImage } from "../utils/uploadImage.js";
+import {
+    getEventRegistrationsById,
+    isUserRegisteredForEvent,
+} from "../db/queries/eventRegistrationsQueries.js";
+import { sendEventCancelledEmail } from "../utils/mailer.js";
 
 const getAllEvents = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -41,7 +47,11 @@ const getEventDetails = async (req: AuthRequest, res: express.Response) => {
         if (!event) {
             return res.status(404).json({ error: "Event not found" });
         }
-        return res.status(200).json({ event });
+        const isRegistered = await isUserRegisteredForEvent(
+            eventId,
+            req.user!.userId,
+        );
+        return res.status(200).json({ event, isRegistered });
     } catch (err) {
         console.error("Error while getting event details", err);
         return res.status(500).json({ error: "Internal server error" });
@@ -145,7 +155,7 @@ const createEvent = async (req: AuthRequest, res: express.Response) => {
 const editEvent = async (req: AuthRequest, res: express.Response) => {
     try {
         const eventId = getRouteParam(req.params.eventId);
-        const clubId = getRouteParam(req.params.clubId);
+        const clubId = getRouteParam(req.params.id);
 
         const collegeId = req.user?.collegeId;
         if (!collegeId) {
@@ -163,7 +173,6 @@ const editEvent = async (req: AuthRequest, res: express.Response) => {
             location,
             max_participants,
             registration_fee,
-            status,
         } = req.body;
 
         //validating time
@@ -239,7 +248,6 @@ const editEvent = async (req: AuthRequest, res: express.Response) => {
             location,
             max_participants,
             registration_fee,
-            status,
         });
         if (!event) {
             return res.status(404).json({ error: "Event not found" });
@@ -253,4 +261,49 @@ const editEvent = async (req: AuthRequest, res: express.Response) => {
         console.error("Error while editing event", err);
         return res.status(500).json({ error: "Internal server error" });
     }
+};
+
+const cancelEvent = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const eventId = getRouteParam(req.params.eventId);
+        const clubId = getRouteParam(req.params.id);
+
+        const event = await editEventStatus(eventId, clubId, "cancelled");
+        if (!event) {
+            return res.status(404).json({ error: "Event not found" });
+        }
+        const registrations = await getEventRegistrationsById(eventId, clubId);
+
+        for (const reg of registrations) {
+            try {
+                await sendEventCancelledEmail({
+                    to: reg.email,
+                    name: reg.name,
+                    eventName: event.title,
+                    clubName: event.club_name,
+                });
+            } catch (err) {
+                console.error(
+                    `Failed to send cancellation email to ${reg.email}`,
+                    err,
+                );
+            }
+        }
+        return res.status(200).json({
+            message: "Event cancelled successfully",
+            event,
+        });
+    } catch (err) {
+        console.error("Error while cancelling event", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export {
+    getAllEvents,
+    getEventDetails,
+    getClubEvents,
+    createEvent,
+    editEvent,
+    cancelEvent,
 };
