@@ -151,3 +151,13 @@ export async function editEventStatus(
     const result = await pool.query(query, [eventId, clubId, status]);
     return result.rows[0];
 }
+
+export async function markCompletedEvents() {
+    const query = `
+        UPDATE events
+        SET status = 'completed'
+        WHERE status = 'scheduled'
+            AND end_time <= NOW();
+    `;
+    await pool.query(query);
+}
