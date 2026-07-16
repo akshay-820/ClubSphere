@@ -10,6 +10,8 @@ import clubRequestsRoutes from "./routes/clubRequests.js";
 import clubRoutes from "./routes/clubs.js";
 import paymentRoutes from "./routes/payments.js";
 import postRoutes from "./routes/posts.js";
+import eventRoutes from "./routes/events.js";
+import { startCronJobs } from "./tasks/index.js";
 
 const app = express();
 
@@ -27,6 +29,7 @@ app.use("/club-requests", clubRequestsRoutes);
 app.use("/clubs", clubRoutes);
 app.use("/payments", paymentRoutes);
 app.use("/posts", postRoutes);
+app.use("/events", eventRoutes);
 
 app.get("/", (req: express.Request, res: express.Response) => {
     res.send("Hello ClubSphere");
@@ -36,6 +39,7 @@ app.get("/", (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query("SELECT current_database() AS db_name");
         console.log("Database connected:", result.rows[0].db_name);
+        startCronJobs();
         app.listen(process.env.PORT, () => {
             console.log("Server is running on port", process.env.PORT);
         });

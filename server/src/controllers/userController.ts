@@ -8,8 +8,6 @@ import {
 } from "../db/queries/userQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { uploadImage } from "../utils/uploadImage.js";
-import { error } from "console";
-
 const getMyProfile = async (req: AuthRequest, res: express.Response) => {
     try {
         const userId = req.user?.userId;

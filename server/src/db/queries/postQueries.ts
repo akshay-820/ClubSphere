@@ -16,14 +16,16 @@ type postUpdateType = {
     content?: string;
 };
 
-export async function getPostByClub(clubId: string) {
+export async function getPostByClub(clubId: string, collegeId: string) {
     const query = `
-        SELECT id,type,title,content,created_at,media_urls
+        SELECT p.id,p.type,p.title,p.content,p.created_at,p.media_urls
         FROM posts p
-        WHERE club_id = $1
+        JOIN clubs c on c.id = p.club_id
+        WHERE p.club_id = $1
+            AND c.college_id = $2
         ORDER BY p.created_at DESC;
     `;
-    const result = await pool.query(query, [clubId]);
+    const result = await pool.query(query, [clubId, collegeId]);
     return result.rows;
 }
 
