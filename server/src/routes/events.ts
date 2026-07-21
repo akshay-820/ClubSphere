@@ -12,10 +12,17 @@ import {
     getEventDetails,
 } from "../controllers/eventController.js";
 import { isLoggedIn } from "../middleware/authMiddleware.js";
+import { canViewEventRegistrations } from "../middleware/eventRegistrations.js";
+import { viewRegistrations } from "../controllers/eventRegistrations.js";
 
 const router = Router();
 
 router.route("/").get(isLoggedIn, getAllEvents);
 router.route("/:id").get(isLoggedIn, getEventDetails);
+
+//registrations
+router
+    .route("/:id/registrations")
+    .get(isLoggedIn, canViewEventRegistrations, viewRegistrations);
 
 export default router;

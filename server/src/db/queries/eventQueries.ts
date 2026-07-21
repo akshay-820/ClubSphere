@@ -36,6 +36,7 @@ export async function getEventsByCollege(collegeId: string) {
         FROM events e
         JOIN clubs c on c.id = e.club_id
         WHERE c.college_id = $1
+            AND e.status = 'scheduled'
         ORDER BY e.created_at DESC;
     `;
     const result = await pool.query(query, [collegeId]);
