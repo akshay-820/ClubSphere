@@ -1,7 +1,7 @@
 import express from "express";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
-import { getAllRegistrations } from "../db/queries/eventRegistrationQueries.js";
+import { getAllRegistrations } from "../db/queries/eventRegistrationsQueries.js";
 
 const viewRegistrations = async (req: AuthRequest, res: express.Response) => {
     try {

@@ -1,7 +1,7 @@
 import express from "express";
 import { AuthRequest } from "./authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
-import { getClubOfEvent } from "../db/queries/eventRegistrationQueries.js";
+import { getClubOfEvent } from "../db/queries/eventRegistrationsQueries.js";
 import { getUserRoleInClub } from "../db/queries/membershipQueries.js";
 
 const canViewEventRegistrations = async (
