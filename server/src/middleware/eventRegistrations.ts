@@ -15,11 +15,11 @@ const canViewEventRegistrations = async (
     }
     const eventId = getRouteParam(req.params.id);
 
-    const clubId = await getClubOfEvent(eventId);
-    if (!clubId) {
+    const club = await getClubOfEvent(eventId);
+    if (!club) {
         return res.status(404).json({ error: "Event not found" });
     }
-    const role = await getUserRoleInClub(userId, clubId);
+    const role = await getUserRoleInClub(userId, club.club_id);
     const globalRole = req.user?.role;
 
     if (
@@ -30,7 +30,6 @@ const canViewEventRegistrations = async (
     ) {
         return next();
     }
-
     return res.status(403).json({ error: "Forbidden" });
 };
 

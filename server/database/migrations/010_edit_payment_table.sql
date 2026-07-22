@@ -1,0 +1,2 @@
+ALTER TABLE payments
+ADD COLUMN event_id UUID REFERENCES events(id) ON DELETE SET NULL;

@@ -3,9 +3,10 @@ import pool from "../index.js";
 //for the middleware
 export async function getClubOfEvent(eventId: string) {
     const query = `
-        SELECT club_id
-        FROM events 
-        WHERE id = $1;
+        SELECT c.id as club_id,c.college_id
+        FROM clubs c
+        JOIN events e on e.club_id = c.id
+        WHERE e.id = $1;
     `;
     const result = await pool.query(query, [eventId]);
     return result.rows[0];
@@ -34,9 +35,20 @@ export async function getEventRegistrationsById(
         JOIN events e on e.id = er.event_id
         WHERE e.id = $1
             AND e.club_id = $2;
+        ORDER BY er.registered_at DESC;
     `;
     const result = await pool.query(query, [eventId, clubId]);
     return result.rows;
+}
+
+export async function countEventRegistrations(eventId: string) {
+    const query = `
+        SELECT COUNT(*)::int AS count
+        FROM events_registrations
+        WHERE id = $1;
+    `;
+    const result = await pool.query(query, [eventId]);
+    return Number(result.rows[0].count);
 }
 
 export async function isUserRegisteredForEvent(
