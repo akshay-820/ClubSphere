@@ -7,6 +7,7 @@ import { Spinner } from "../components/Spinner";
 import { ErrorAlert } from "../components/ErrorAlert";
 import { PostMediaCarousel } from "../components/PostMediaCarousel";
 import { useAuth } from "../context/AuthContext";
+import { EventCard } from "../components/EventCard";
 import api from "../lib/api";
 import {
     ArrowLeft,
@@ -96,6 +97,8 @@ export default function ClubProfilePage() {
     // Confirm Dialog State
     const [confirmDialog, setConfirmDialog] = useState({
         isOpen: false,
+        title: "Confirm Action",
+        actionLabel: "Delete",
         message: "",
         onConfirm: null,
     });
@@ -110,6 +113,12 @@ export default function ClubProfilePage() {
     const [loadingPosts, setLoadingPosts] = useState(false);
     const [postMenuOpenId, setPostMenuOpenId] = useState(null);
     const [expandedPosts, setExpandedPosts] = useState({});
+
+    // Events Tab State
+    const [events, setEvents] = useState([]);
+    const [loadingEvents, setLoadingEvents] = useState(false);
+    const [eventMenuOpenId, setEventMenuOpenId] = useState(null);
+    const [cancellingEventId, setCancellingEventId] = useState(null);
 
     useEffect(() => {
         const fetchClubDetails = async () => {
@@ -161,6 +170,18 @@ export default function ClubProfilePage() {
         }
     }, [id]);
 
+    const fetchEvents = useCallback(async () => {
+        try {
+            setLoadingEvents(true);
+            const res = await api.get(`/clubs/${id}/events`);
+            setEvents(res.data.events || []);
+        } catch (err) {
+            console.error("Error fetching events:", err);
+        } finally {
+            setLoadingEvents(false);
+        }
+    }, [id]);
+
     useEffect(() => {
         const loadTabData = window.setTimeout(() => {
             if (activeTab === "Members" && id) {
@@ -169,14 +190,19 @@ export default function ClubProfilePage() {
             if (activeTab === "Posts" && id) {
                 fetchPosts();
             }
+            if (activeTab === "Events" && id) {
+                fetchEvents();
+            }
         }, 0);
 
         return () => window.clearTimeout(loadTabData);
-    }, [activeTab, fetchMembers, fetchPosts, id]);
+    }, [activeTab, fetchEvents, fetchMembers, fetchPosts, id]);
 
     const handleDeletePost = (postId) => {
         setConfirmDialog({
             isOpen: true,
+            title: "Delete Post",
+            actionLabel: "Delete",
             message:
                 "Are you sure you want to delete this post? This action cannot be undone.",
             onConfirm: async () => {
@@ -188,6 +214,33 @@ export default function ClubProfilePage() {
                     setTimeout(() => setSuccessMessage(""), 4000);
                 } catch (err) {
                     alert(err.response?.data?.error || "Failed to delete post");
+                }
+            },
+        });
+    };
+
+    const handleCancelEvent = (eventId) => {
+        setConfirmDialog({
+            isOpen: true,
+            title: "Cancel Event",
+            actionLabel: "Cancel Event",
+            message:
+                "Are you sure you want to cancel this event? Registered users will be notified by email.",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    setCancellingEventId(eventId);
+                    await api.patch(`/clubs/${id}/events/${eventId}/cancel`);
+                    await fetchEvents();
+                    setSuccessMessage("Event cancelled successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    alert(
+                        err.response?.data?.error ||
+                            "Failed to cancel event",
+                    );
+                } finally {
+                    setCancellingEventId(null);
                 }
             },
         });
@@ -231,6 +284,8 @@ export default function ClubProfilePage() {
     const handleDeleteClub = () => {
         setConfirmDialog({
             isOpen: true,
+            title: "Delete Club",
+            actionLabel: "Delete",
             message: "Are you sure you want to delete this club?",
             onConfirm: async () => {
                 setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -270,6 +325,8 @@ export default function ClubProfilePage() {
     const handleRemoveMember = (userId) => {
         setConfirmDialog({
             isOpen: true,
+            title: "Remove Member",
+            actionLabel: "Remove",
             message: "Are you sure you want to remove this member?",
             onConfirm: async () => {
                 setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
@@ -295,6 +352,7 @@ export default function ClubProfilePage() {
             await loadRazorpayCheckout();
 
             const orderRes = await api.post("/payments/create-order", {
+                purpose: "membership_fee",
                 clubId: id,
             });
             const order = orderRes.data;
@@ -469,6 +527,20 @@ export default function ClubProfilePage() {
                                             >
                                                 <Newspaper className="w-4 h-4" />
                                                 Create Post
+                                            </button>
+                                        )}
+                                        {(isPresident || isAdmin) && (
+                                            <button
+                                                onClick={() => {
+                                                    setShowMenu(false);
+                                                    navigate(
+                                                        `/clubs/${id}/events/create`,
+                                                    );
+                                                }}
+                                                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#252932] hover:text-white transition-colors"
+                                            >
+                                                <Calendar className="w-4 h-4" />
+                                                Create Event
                                             </button>
                                         )}
                                         {canManageMembers && (
@@ -682,6 +754,136 @@ export default function ClubProfilePage() {
                             ) : (
                                 <div className="text-center p-8 text-gray-500">
                                     No members found.
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    {activeTab === "Events" && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm text-[#555577]">
+                                    {events.length > 0
+                                        ? `${events.length} event${events.length !== 1 ? "s" : ""}`
+                                        : ""}
+                                </p>
+                                {(isPresident || isAdmin) && (
+                                    <button
+                                        onClick={() =>
+                                            navigate(
+                                                `/clubs/${id}/events/create`,
+                                            )
+                                        }
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-medium transition-colors"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        New Event
+                                    </button>
+                                )}
+                            </div>
+
+                            {loadingEvents ? (
+                                <div className="flex justify-center p-8">
+                                    <Spinner className="w-8 h-8 text-blue-500" />
+                                </div>
+                            ) : events.length === 0 ? (
+                                <div className="text-center py-16">
+                                    <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#1a1a2e] border border-[#1e1e3a] flex items-center justify-center">
+                                        <Calendar className="w-6 h-6 text-[#555577]" />
+                                    </div>
+                                    <p className="text-sm font-medium text-[#f0f0ff] mb-1">
+                                        No events yet
+                                    </p>
+                                    <p className="text-xs text-[#555577]">
+                                        {isPresident || isAdmin
+                                            ? "Create the first event for this club."
+                                            : "This club has not scheduled events yet."}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                    {events.map((event) => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={{
+                                                ...event,
+                                                club_name: club.name,
+                                            }}
+                                            variant="large"
+                                            onClick={() =>
+                                                navigate(`/events/${event.id}`)
+                                            }
+                                            actions={
+                                                (isPresident || isAdmin) && (
+                                                    <div className="relative">
+                                                        <button
+                                                            onClick={() =>
+                                                                setEventMenuOpenId(
+                                                                    eventMenuOpenId ===
+                                                                        event.id
+                                                                        ? null
+                                                                        : event.id,
+                                                                )
+                                                            }
+                                                            onBlur={() =>
+                                                                setTimeout(
+                                                                    () =>
+                                                                        setEventMenuOpenId(
+                                                                            null,
+                                                                        ),
+                                                                    200,
+                                                                )
+                                                            }
+                                                            className="p-1.5 text-white bg-black/60 hover:bg-black/80 border border-white/10 rounded-lg transition-colors"
+                                                        >
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </button>
+                                                        {eventMenuOpenId ===
+                                                            event.id && (
+                                                            <div className="absolute right-0 mt-1 w-36 bg-[#1C1F26] border border-gray-800 rounded-xl shadow-2xl py-1 z-50">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEventMenuOpenId(
+                                                                            null,
+                                                                        );
+                                                                        navigate(
+                                                                            `/clubs/${id}/events/${event.id}/edit`,
+                                                                        );
+                                                                    }}
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-[#252932] hover:text-white transition-colors"
+                                                                >
+                                                                    <Pencil className="w-3.5 h-3.5" />
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEventMenuOpenId(
+                                                                            null,
+                                                                        );
+                                                                        handleCancelEvent(
+                                                                            event.id,
+                                                                        );
+                                                                    }}
+                                                                    disabled={
+                                                                        event.status ===
+                                                                            "cancelled" ||
+                                                                        cancellingEventId ===
+                                                                            event.id
+                                                                    }
+                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 disabled:text-red-900 disabled:hover:bg-transparent transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                    {cancellingEventId ===
+                                                                    event.id
+                                                                        ? "Cancelling"
+                                                                        : "Cancel"}
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            }
+                                        />
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -939,7 +1141,7 @@ export default function ClubProfilePage() {
                             Overview content coming soon.
                         </p>
                     )}
-                    {["Events", "Gallery", "About"].includes(activeTab) && (
+                    {["Gallery", "About"].includes(activeTab) && (
                         <p className="text-gray-500 italic">
                             Content for {activeTab} will go here.
                         </p>
@@ -1045,7 +1247,7 @@ export default function ClubProfilePage() {
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                         <div className="bg-[#12141D] border border-gray-800 rounded-2xl w-full max-w-sm shadow-2xl p-6">
                             <h3 className="text-lg font-semibold text-white mb-3">
-                                Confirm Action
+                                {confirmDialog.title || "Confirm Action"}
                             </h3>
                             <p className="text-gray-300 text-sm mb-6">
                                 {confirmDialog.message}
@@ -1066,7 +1268,7 @@ export default function ClubProfilePage() {
                                     onClick={confirmDialog.onConfirm}
                                     className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
                                 >
-                                    Delete
+                                    {confirmDialog.actionLabel || "Delete"}
                                 </button>
                             </div>
                         </div>

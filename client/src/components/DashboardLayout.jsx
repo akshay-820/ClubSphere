@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { FileText, User, LogOut, Shield, Pencil, Layers, Users, Newspaper } from "lucide-react";
+import { CalendarDays, FileText, User, LogOut, Shield, Pencil, Layers, Users, Newspaper } from "lucide-react";
 import logo from "../assets/logo.png";
 
 export function DashboardLayout({ children }) {
@@ -48,6 +48,11 @@ export function DashboardLayout({ children }) {
                     <NavLink to="/posts" className={navLink}>
                         <Newspaper className="w-4 h-4" />
                         Posts
+                    </NavLink>
+
+                    <NavLink to="/events" className={navLink}>
+                        <CalendarDays className="w-4 h-4" />
+                        Events
                     </NavLink>
 
                     <NavLink to="/profile" className={navLink}>

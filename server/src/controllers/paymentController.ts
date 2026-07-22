@@ -126,11 +126,14 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             //check if event registration is valid
             if (event.status !== "scheduled") {
                 return res
-                    .status(404)
+                    .status(400)
                     .json({ error: "Event registrations closed" });
             }
             const count = await countEventRegistrations(eventId);
-            if (count >= event.max_participants) {
+            if (
+                event.max_participants !== null &&
+                count >= event.max_participants
+            ) {
                 return res
                     .status(400)
                     .json({ error: "Event has reached max participants" });
@@ -179,7 +182,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 amount: order.amount,
                 currency: order.currency,
                 clubName: club.name,
-                eventName: event.name,
+                eventName: event.title,
                 paymentId: payment.id,
             });
         }

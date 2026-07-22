@@ -10,6 +10,9 @@ import VerifyOtpPage from './pages/auth/VerifyOtpPage'
 import FeedPage from './pages/FeedPage'
 import PostsPage from './pages/PostsPage'
 import PostDetailPage from './pages/PostDetailPage'
+import EventsPage from './pages/EventsPage'
+import EventDetailPage from './pages/EventDetailPage'
+import EventFormPage from './pages/EventFormPage'
 import CreatePostPage from './pages/CreatePostPage'
 import EditPostPage from './pages/EditPostPage'
 import ProfilePage from './pages/ProfilePage'
@@ -45,12 +48,17 @@ export default function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/posts" element={<PostsPage />} />
             <Route path="/posts/:id" element={<PostDetailPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/create" element={<Navigate to="/clubs" replace />} />
+            <Route path="/events/:id" element={<EventDetailPage />} />
             <Route path="/clubs" element={<ClubsPage />} />
-            <Route path="/clubs/:id" element={<ClubProfilePage />} />
-            <Route path="/clubs/:id/edit" element={<EditClubPage />} />
+            <Route path="/clubs/request" element={<RequestClubPage />} />
+            <Route path="/clubs/:id/events/create" element={<EventFormPage mode="create" />} />
+            <Route path="/clubs/:id/events/:eventId/edit" element={<EventFormPage mode="edit" />} />
             <Route path="/clubs/:id/posts/create" element={<CreatePostPage />} />
             <Route path="/clubs/:id/posts/:postId/edit" element={<EditPostPage />} />
-            <Route path="/clubs/request" element={<RequestClubPage />} />
+            <Route path="/clubs/:id/edit" element={<EditClubPage />} />
+            <Route path="/clubs/:id" element={<ClubProfilePage />} />
 
             {/* College admin: edit their own college + club requests */}
             <Route

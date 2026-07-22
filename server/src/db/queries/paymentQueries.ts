@@ -169,7 +169,7 @@ export async function completePaymentAndEnsureRegistration(
     }
     const count = countResult.rows[0].count;
     const maxParticipants = event.max_participants;
-    if (count >= maxParticipants) {
+    if (maxParticipants !== null && count >= maxParticipants) {
         throw new Error("Event is full");
     }
 
@@ -190,6 +190,7 @@ export async function completePaymentAndEnsureRegistration(
         `
             INSERT INTO event_registrations(user_id,event_id,payment_id)
             VALUES ($1,$2,$3)
+            ON CONFLICT (user_id, event_id) DO NOTHING
             RETURNING *;
         `,
         [payment.user_id, payment.event_id, payment.id],

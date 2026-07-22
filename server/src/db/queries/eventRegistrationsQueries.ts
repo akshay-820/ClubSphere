@@ -34,7 +34,7 @@ export async function getEventRegistrationsById(
         JOIN users u on u.id = er.user_id
         JOIN events e on e.id = er.event_id
         WHERE e.id = $1
-            AND e.club_id = $2;
+            AND e.club_id = $2
         ORDER BY er.registered_at DESC;
     `;
     const result = await pool.query(query, [eventId, clubId]);
@@ -44,8 +44,8 @@ export async function getEventRegistrationsById(
 export async function countEventRegistrations(eventId: string) {
     const query = `
         SELECT COUNT(*)::int AS count
-        FROM events_registrations
-        WHERE id = $1;
+        FROM event_registrations
+        WHERE event_id = $1;
     `;
     const result = await pool.query(query, [eventId]);
     return Number(result.rows[0].count);
