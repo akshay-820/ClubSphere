@@ -1,5 +1,4 @@
-import { PoolClient } from "pg";
-import pool from "../index.js";
+import { Pool, PoolClient } from "pg";
 
 export type PaymentRecord = {
     id: string;
@@ -16,6 +15,7 @@ export type PaymentRecord = {
 };
 
 export async function createPendingPayment(input: {
+    db: Pool | PoolClient;
     userId: string;
     clubId: string;
     amount: number;
@@ -36,7 +36,7 @@ export async function createPendingPayment(input: {
         VALUES ($1, $2, $3, $4, 'pending', $5, $6)
         RETURNING *;
     `;
-    const result = await pool.query<PaymentRecord>(query, [
+    const result = await input.db.query<PaymentRecord>(query, [
         input.userId,
         input.clubId,
         input.amount,
@@ -132,77 +132,5 @@ export async function completePaymentAndEnsureMembership(
     return {
         payment: updatedPayment,
         membership: membership.rows[0] ?? null,
-    };
-}
-
-//lock event -> count registrations -> update payment -> insert registration
-export async function completePaymentAndEnsureRegistration(
-    client: PoolClient,
-    payment: PaymentRecord,
-    razorpayPaymentId: string,
-) {
-    if (!payment.event_id) {
-        throw new Error("Payment missing event_id");
-    }
-    //lock the event row
-    const eventResult = await client.query(
-        `
-            SELECT max_participants
-            FROM events
-            WHERE id = $1
-            FOR UPDATE;
-    `,
-        [payment.event_id],
-    );
-    const countResult = await client.query(
-        `
-            SELECT COUNT(*)::int AS count
-            FROM event_registrations
-            WHERE event_id = $1;
-    `,
-        [payment.event_id],
-    );
-
-    const event = eventResult.rows[0];
-    if (!event) {
-        throw new Error("Event not found");
-    }
-    const count = countResult.rows[0].count;
-    const maxParticipants = event.max_participants;
-    if (maxParticipants !== null && count >= maxParticipants) {
-        throw new Error("Event is full");
-    }
-
-    const completedPayment = await client.query<PaymentRecord>(
-        `
-            UPDATE payments
-            SET
-                status = 'completed',
-                razorpay_payment_id = COALESCE(razorpay_payment_id, $2),
-                paid_at = COALESCE(paid_at, NOW())
-            WHERE id = $1
-            RETURNING *;
-        `,
-        [payment.id, razorpayPaymentId],
-    );
-
-    const registration = await client.query(
-        `
-            INSERT INTO event_registrations(user_id,event_id,payment_id)
-            VALUES ($1,$2,$3)
-            ON CONFLICT (user_id, event_id) DO NOTHING
-            RETURNING *;
-        `,
-        [payment.user_id, payment.event_id, payment.id],
-    );
-
-    const updatedPayment = completedPayment.rows[0];
-    if (!updatedPayment) {
-        throw new Error("Failed to complete payment");
-    }
-
-    return {
-        payment: updatedPayment,
-        registration: registration.rows[0] ?? null,
     };
 }

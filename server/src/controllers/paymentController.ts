@@ -4,7 +4,6 @@ import { getClubById } from "../db/queries/clubQueries.js";
 import { isMember } from "../db/queries/membershipQueries.js";
 import {
     completePaymentAndEnsureMembership,
-    completePaymentAndEnsureRegistration,
     createPendingPayment,
     getPaymentByIdForUpdate,
     getPaymentByRazorpayOrderIdForUpdate,
@@ -22,6 +21,11 @@ import {
     isUserRegisteredForEvent,
 } from "../db/queries/eventRegistrationsQueries.js";
 import { getEventById } from "../db/queries/eventQueries.js";
+import {
+    createEventRegistrationRequest,
+    lockEventAndGetCapacity,
+    completePaymentAndEnsureRegistration,
+} from "../db/queries/eventPaymentQueries.js";
 
 const paidRegistrationTypes = new Set(["paid", "both"]);
 
@@ -93,6 +97,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             });
 
             const payment = await createPendingPayment({
+                db: pool,
                 userId: userId,
                 clubId: clubId,
                 amount: amount,
@@ -109,6 +114,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 paymentId: payment.id,
             });
         } else {
+            const client = await pool.connect();
             const { eventId } = req.body;
             if (typeof eventId !== "string") {
                 return res.status(400).json({ error: "Invalid event" });
@@ -129,15 +135,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                     .status(400)
                     .json({ error: "Event registrations closed" });
             }
-            const count = await countEventRegistrations(eventId);
-            if (
-                event.max_participants !== null &&
-                count >= event.max_participants
-            ) {
-                return res
-                    .status(400)
-                    .json({ error: "Event has reached max participants" });
-            }
+
             const alreadyRegistered = await isUserRegisteredForEvent(
                 eventId,
                 userId,
@@ -146,6 +144,23 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 return res
                     .status(400)
                     .json({ error: "User already registered for the event" });
+            }
+
+            await client.query("BEGIN");
+
+            const cap = await lockEventAndGetCapacity(client, eventId);
+            const capacity = cap.rows[0];
+
+            const maxParticipants = capacity.max_participants;
+            const registered = Number(capacity.registered_count);
+            const pending = Number(capacity.pending_count);
+
+            if (
+                maxParticipants !== null &&
+                registered + pending >= maxParticipants
+            ) {
+                await client.query("ROLLBACK");
+                return res.status(400).json({ error: "Event is full" });
             }
 
             const amount = Number(event.registration_fee);
@@ -168,6 +183,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             });
 
             const payment = await createPendingPayment({
+                db: client,
                 userId: userId,
                 clubId: clubId,
                 eventId: eventId,
@@ -175,6 +191,15 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 purpose: "event_fee",
                 razorpayOrderId: order.id,
             });
+
+            const pending_registration = await createEventRegistrationRequest(
+                client,
+                userId,
+                eventId,
+                payment.id,
+            );
+
+            await client.query("COMMIT");
 
             return res.status(201).json({
                 keyId: getRazorpayKeyId(),
@@ -184,11 +209,16 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 clubName: club.name,
                 eventName: event.title,
                 paymentId: payment.id,
+                pending_registration,
             });
         }
     } catch (err) {
         console.error("Error while creating razorpay order", err);
-        return res.status(500).json({ error: "Unable to create order" });
+        return res
+            .status(500)
+            .json({
+                error: "Unable to create order, try again after a few mins",
+            });
     }
 };
 
@@ -237,6 +267,12 @@ const verifyPayment = async (req: AuthRequest, res: express.Response) => {
         ) {
             await client.query("ROLLBACK");
             return res.status(400).json({ error: "Invalid payment purpose" });
+        }
+        if (payment.status === "completed") {
+            await client.query("COMMIT");
+            return res.status(200).json({
+                message: "Payment already verified",
+            });
         }
 
         const isValidSignature = verifyRazorpayPaymentSignature({
@@ -338,7 +374,10 @@ const handleWebhook = async (req: express.Request, res: express.Response) => {
             await client.query("COMMIT");
             return res.status(200).json({ received: true });
         }
-
+        if (payment.status === "completed") {
+            await client.query("COMMIT");
+            return res.status(200).json({ received: true });
+        }
         if (payment.purpose === "membership_fee") {
             await completePaymentAndEnsureMembership(
                 client,
