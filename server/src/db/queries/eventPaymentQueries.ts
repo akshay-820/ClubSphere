@@ -129,7 +129,7 @@ export async function getPendingEventRegistrationById(
 ) {
     const query = `
         SELECT *
-        FROM pending_registrations
+        FROM pending_event_registrations
         WHERE user_id = $1
           AND event_id = $2;
     `;
