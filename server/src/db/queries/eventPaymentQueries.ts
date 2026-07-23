@@ -121,3 +121,19 @@ export async function deletePendingEventRegistrations() {
     const result = await pool.query(query);
     return result.rows;
 }
+
+export async function getPendingEventRegistrationById(
+    client: PoolClient,
+    userId: string,
+    eventId: string,
+) {
+    const query = `
+        SELECT *
+        FROM pending_registrations
+        WHERE user_id = $1
+          AND event_id = $2;
+    `;
+
+    const result = await client.query(query, [userId, eventId]);
+    return result.rows[0];
+}

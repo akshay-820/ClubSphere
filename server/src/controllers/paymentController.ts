@@ -25,11 +25,15 @@ import {
     createEventRegistrationRequest,
     lockEventAndGetCapacity,
     completePaymentAndEnsureRegistration,
+    getPendingEventRegistrationById,
 } from "../db/queries/eventPaymentQueries.js";
+import { transcode } from "node:buffer";
 
 const paidRegistrationTypes = new Set(["paid", "both"]);
 
 const createOrder = async (req: AuthRequest, res: express.Response) => {
+    const client = await pool.connect();
+    let transactionStarted = false;
     try {
         const { purpose } = req.body;
         const userId = req.user?.userId;
@@ -114,7 +118,6 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 paymentId: payment.id,
             });
         } else {
-            const client = await pool.connect();
             const { eventId } = req.body;
             if (typeof eventId !== "string") {
                 return res.status(400).json({ error: "Invalid event" });
@@ -147,6 +150,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             }
 
             await client.query("BEGIN");
+            transactionStarted = true;
 
             const cap = await lockEventAndGetCapacity(client, eventId);
             const capacity = cap.rows[0];
@@ -160,7 +164,21 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
                 registered + pending >= maxParticipants
             ) {
                 await client.query("ROLLBACK");
+                transactionStarted = false;
                 return res.status(400).json({ error: "Event is full" });
+            }
+
+            const alreadyRequested = await getPendingEventRegistrationById(
+                client,
+                userId,
+                eventId,
+            );
+            if (alreadyRequested) {
+                await client.query("ROLLBACK");
+                transactionStarted = false;
+                return res
+                    .status(400)
+                    .json({ error: "Wait for few more mins to try again" });
             }
 
             const amount = Number(event.registration_fee);
@@ -200,6 +218,7 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             );
 
             await client.query("COMMIT");
+            transactionStarted = false;
 
             return res.status(201).json({
                 keyId: getRazorpayKeyId(),
@@ -213,12 +232,13 @@ const createOrder = async (req: AuthRequest, res: express.Response) => {
             });
         }
     } catch (err) {
+        if (transactionStarted) await client.query("ROLLBACK");
         console.error("Error while creating razorpay order", err);
-        return res
-            .status(500)
-            .json({
-                error: "Unable to create order, try again after a few mins",
-            });
+        return res.status(500).json({
+            error: "Unable to create order, try again after a few mins",
+        });
+    } finally {
+        client.release();
     }
 };
 
