@@ -11,6 +11,7 @@ import { canDeleteClub, canUpdateClub } from "../middleware/clubMiddleware.js";
 import { upload } from "../middleware/upload.js";
 import {
     addMemberInClub,
+    makeAdmin,
     removeMemberInClub,
     showAllMembers,
 } from "../controllers/membershipController.js";
@@ -71,5 +72,8 @@ router
 router
     .route("/:id/events/:eventId/cancel")
     .patch(isLoggedIn, canUpdateClub, cancelEvent);
+
+//update user club role
+router.route("/:id/make-admin").post(isLoggedIn, canUpdateClub, makeAdmin);
 
 export default router;

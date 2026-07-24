@@ -80,3 +80,20 @@ export async function getMemberships(clubId: string) {
     const result = await pool.query(query, [clubId]);
     return result.rows;
 }
+
+//to change user's role in the club
+export async function changeUserClubRole(
+    userId: string,
+    clubId: string,
+    role: string,
+) {
+    const query = `
+        UPDATE memberships 
+        SET role = $3
+        WHERE user_id = $1
+            AND club_id = $2
+        RETURNING id,user_id,club_id,role;
+    `;
+    const result = await pool.query(query, [userId, clubId, role]);
+    return result.rows[0];
+}

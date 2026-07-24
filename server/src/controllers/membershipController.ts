@@ -1,6 +1,7 @@
 import express from "express";
 import {
     addMembership,
+    changeUserClubRole,
     getMemberships,
     getUserRoleInClub,
     isMember,
@@ -100,4 +101,33 @@ const showAllMembers = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export { addMemberInClub, removeMemberInClub, showAllMembers };
+const makeAdmin = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const userId = req.body.userId;
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+        const clubId = getRouteParam(req.params.id);
+
+        const clubRole = await getUserRoleInClub(userId, clubId);
+        if (clubRole === "admin" || clubRole === "president") {
+            return res.status(409).json({ error: "Cannot update user's role" });
+        }
+        const role = "admin";
+
+        const result = await changeUserClubRole(userId, clubId, role);
+        if (!result) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        return res.status(200).json({
+            message: "Successfully updated user's club role",
+            result,
+        });
+    } catch (err) {
+        console.error("Error while making user as admin", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export { addMemberInClub, removeMemberInClub, showAllMembers, makeAdmin };
