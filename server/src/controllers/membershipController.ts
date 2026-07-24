@@ -10,6 +10,7 @@ import {
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
 import { getUserById } from "../db/queries/userQueries.js";
+import { error } from "node:console";
 
 const addMemberInClub = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -130,4 +131,37 @@ const makeAdmin = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
-export { addMemberInClub, removeMemberInClub, showAllMembers, makeAdmin };
+const removeAdmin = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const userId = req.body.userId;
+        if (!userId) {
+            return res.status(400).json({ error: "User ID required" });
+        }
+        const clubId = getRouteParam(req.params.id);
+        const clubRole = await getUserRoleInClub(userId, clubId);
+        if (clubRole === "president" || clubRole === "member") {
+            return res.status(409).json({ error: "Cannot update user's role" });
+        }
+
+        const result = await changeUserClubRole(userId, clubId, "member");
+        if (!result) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        return res.status(200).json({
+            error: "Successfully made the user as member",
+            result,
+        });
+    } catch (err) {
+        console.error("Error while removing admin", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export {
+    addMemberInClub,
+    removeMemberInClub,
+    showAllMembers,
+    makeAdmin,
+    removeAdmin,
+};

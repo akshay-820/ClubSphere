@@ -12,6 +12,7 @@ import { upload } from "../middleware/upload.js";
 import {
     addMemberInClub,
     makeAdmin,
+    removeAdmin,
     removeMemberInClub,
     showAllMembers,
 } from "../controllers/membershipController.js";
@@ -75,5 +76,6 @@ router
 
 //update user club role
 router.route("/:id/make-admin").post(isLoggedIn, canUpdateClub, makeAdmin);
+router.route("/:id/remove-admin").post(isLoggedIn, canDeleteClub, removeAdmin);
 
 export default router;
