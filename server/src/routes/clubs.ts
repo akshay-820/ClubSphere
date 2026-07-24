@@ -19,6 +19,7 @@ import {
     removeAdmin,
     removeMemberInClub,
     showAllMembers,
+    removePresident,
 } from "../controllers/membershipController.js";
 import {
     createNewPost,
@@ -32,6 +33,7 @@ import {
     editEvent,
     getClubEvents,
 } from "../controllers/eventController.js";
+import { canRemovePresident } from "../middleware/memberships.js";
 
 const router = Router();
 
@@ -87,4 +89,7 @@ router
     .route("/:id/make-president")
     .post(isLoggedIn, canPerformMajorClubOperations, appointPresident);
 
+router
+    .route("/:id/remove-president")
+    .post(isLoggedIn, canRemovePresident, removePresident);
 export default router;

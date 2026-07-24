@@ -139,3 +139,13 @@ export async function searchNonMembers(
     const result = await pool.query(query, [name, collegeId, clubId]);
     return result.rows;
 }
+
+export async function getCollegeOfClub(id: string) {
+    const query = `
+        SELECT college_id
+        FROM clubs
+        WHERE id = $1;
+    `;
+    const result = await pool.query(query, [id]);
+    return result.rows[0];
+}

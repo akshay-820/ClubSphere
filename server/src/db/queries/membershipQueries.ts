@@ -138,3 +138,15 @@ export async function makePresident(userId: string, clubId: string) {
     const result = await pool.query(query, [userId, clubId]);
     return result.rows[0];
 }
+
+export async function deletePresident(userId: string, clubId: string) {
+    const query = `
+UPDATE memberships
+SET role = 'admin'
+WHERE user_id = $1
+AND club_id = $2
+RETURNING id,user_id,club_id,role;
+`;
+    const result = await pool.query(query, [userId, clubId]);
+    return result.rows[0];
+}

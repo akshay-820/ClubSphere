@@ -6,6 +6,7 @@ import {
     getMemberships,
     getUserRoleInClub,
     isMember,
+    deletePresident,
     makePresident,
     removeMembership,
     transferPresident,
@@ -13,7 +14,6 @@ import {
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
 import { getUserById } from "../db/queries/userQueries.js";
-import { error } from "node:console";
 
 const addMemberInClub = async (req: AuthRequest, res: express.Response) => {
     try {
@@ -262,6 +262,27 @@ const appointPresident = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
+const removePresident = async (req: AuthRequest, res: express.Response) => {
+    try {
+        const userId = req.body.userId;
+        const clubId = getRouteParam(req.params.id);
+
+        const clubRole = await getUserRoleInClub(userId, clubId);
+        if (!clubRole || clubRole !== "president") {
+            return res.status(404).json({ error: "User is not the president" });
+        }
+
+        const result = await deletePresident(userId, clubId);
+        return res.status(200).json({
+            message: "President removed successfully",
+            result,
+        });
+    } catch (err) {
+        console.error("Error while removing president role", err);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
 export {
     addMemberInClub,
     removeMemberInClub,
@@ -269,4 +290,5 @@ export {
     makeAdmin,
     removeAdmin,
     appointPresident,
+    removePresident,
 };
