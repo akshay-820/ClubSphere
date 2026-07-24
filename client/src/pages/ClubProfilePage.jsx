@@ -28,6 +28,10 @@ import {
     ChevronDown,
     ChevronUp,
     Newspaper,
+    Shield,
+    ShieldOff,
+    Crown,
+    UserMinus,
 } from "lucide-react";
 
 const loadRazorpayCheckout = () => {
@@ -99,9 +103,21 @@ export default function ClubProfilePage() {
         isOpen: false,
         title: "Confirm Action",
         actionLabel: "Delete",
+        actionVariant: "danger", // "danger" | "primary"
         message: "",
         onConfirm: null,
     });
+
+    // Error Dialog State
+    const [errorDialog, setErrorDialog] = useState({
+        isOpen: false,
+        title: "Error",
+        message: "",
+    });
+
+    const showError = (message, title = "Error") => {
+        setErrorDialog({ isOpen: true, title, message });
+    };
 
     // Success Message State
     const [successMessage, setSuccessMessage] = useState("");
@@ -119,6 +135,9 @@ export default function ClubProfilePage() {
     const [loadingEvents, setLoadingEvents] = useState(false);
     const [eventMenuOpenId, setEventMenuOpenId] = useState(null);
     const [cancellingEventId, setCancellingEventId] = useState(null);
+
+    // Member action menu state
+    const [memberMenuOpenId, setMemberMenuOpenId] = useState(null);
 
     useEffect(() => {
         const fetchClubDetails = async () => {
@@ -323,11 +342,13 @@ export default function ClubProfilePage() {
     };
 
     const handleRemoveMember = (userId) => {
+        setMemberMenuOpenId(null);
         setConfirmDialog({
             isOpen: true,
             title: "Remove Member",
             actionLabel: "Remove",
-            message: "Are you sure you want to remove this member?",
+            actionVariant: "danger",
+            message: "Are you sure you want to remove this member from the club?",
             onConfirm: async () => {
                 setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
                 try {
@@ -336,9 +357,103 @@ export default function ClubProfilePage() {
                     });
                     fetchMembers();
                 } catch (err) {
-                    alert(
-                        err.response?.data?.error || "Failed to remove member",
-                    );
+                    showError(err.response?.data?.error || "Failed to remove member");
+                }
+            },
+        });
+    };
+
+    const handleMakeAdmin = (userId) => {
+        setMemberMenuOpenId(null);
+        setConfirmDialog({
+            isOpen: true,
+            title: "Make Admin",
+            actionLabel: "Make Admin",
+            actionVariant: "primary",
+            message: "Are you sure you want to promote this member to club admin?",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    await api.post(`/clubs/${id}/make-admin`, { userId });
+                    fetchMembers();
+                    setSuccessMessage("Member promoted to admin successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    showError(err.response?.data?.error || "Failed to make admin", "Make Admin Failed");
+                }
+            },
+        });
+    };
+
+    const handleRemoveAdmin = (userId) => {
+        setMemberMenuOpenId(null);
+        setConfirmDialog({
+            isOpen: true,
+            title: "Remove Admin",
+            actionLabel: "Remove Admin",
+            actionVariant: "danger",
+            message: "Are you sure you want to demote this admin back to a regular member?",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    await api.post(`/clubs/${id}/remove-admin`, { userId });
+                    fetchMembers();
+                    setSuccessMessage("Admin demoted to member successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    showError(err.response?.data?.error || "Failed to remove admin", "Remove Admin Failed");
+                }
+            },
+        });
+    };
+
+    const handleMakePresident = (userId, viewerIsPresident) => {
+        setMemberMenuOpenId(null);
+        const confirmMessage = viewerIsPresident
+            ? "Making this member the president will demote you to an admin. Are you sure you want to transfer the presidency?"
+            : "Are you sure you want to appoint this member as president?";
+        setConfirmDialog({
+            isOpen: true,
+            title: viewerIsPresident ? "Transfer Presidency" : "Make President",
+            actionLabel: viewerIsPresident ? "Yes, Transfer" : "Make President",
+            actionVariant: "primary",
+            message: confirmMessage,
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    await api.post(`/clubs/${id}/make-president`, { userId });
+                    fetchMembers();
+                    // If the current viewer was president, they are now admin
+                    if (viewerIsPresident) {
+                        setUserRoleInClub("admin");
+                    }
+                    setSuccessMessage(viewerIsPresident ? "Presidency transferred successfully." : "Member appointed as president successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    const msg = err.response?.data?.error || "Failed to appoint president";
+                    showError(msg, "Appoint President Failed");
+                }
+            },
+        });
+    };
+
+    const handleRemovePresident = (userId) => {
+        setMemberMenuOpenId(null);
+        setConfirmDialog({
+            isOpen: true,
+            title: "Remove President",
+            actionLabel: "Remove President",
+            actionVariant: "danger",
+            message: "Are you sure you want to remove the president role from this member? They will remain in the club as a regular member.",
+            onConfirm: async () => {
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                try {
+                    await api.post(`/clubs/${id}/remove-president`, { userId });
+                    fetchMembers();
+                    setSuccessMessage("President removed successfully.");
+                    setTimeout(() => setSuccessMessage(""), 4000);
+                } catch (err) {
+                    showError(err.response?.data?.error || "Failed to remove president", "Remove President Failed");
                 }
             },
         });
@@ -729,24 +844,124 @@ export default function ClubProfilePage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-xs px-2 py-1 bg-gray-800 text-gray-300 rounded-md capitalize">
-                                                    {member.role || "Member"}
+                                                <span
+                                                    className={`text-xs px-2 py-1 rounded-md capitalize font-medium ${
+                                                        member.role === "president"
+                                                            ? "bg-yellow-500/15 text-yellow-400 border border-yellow-500/20"
+                                                            : member.role === "admin"
+                                                            ? "bg-blue-500/15 text-blue-400 border border-blue-500/20"
+                                                            : "bg-gray-800 text-gray-400 border border-gray-700/40"
+                                                    }`}
+                                                >
+                                                    {member.role || "member"}
                                                 </span>
-                                                {canManageMembers &&
-                                                    member.role !==
-                                                        "president" && (
-                                                        <button
-                                                            onClick={() =>
-                                                                handleRemoveMember(
-                                                                    member.id,
-                                                                )
+
+                                                {/* Three-dot member action menu */}
+                                                {(() => {
+                                                    // Determine which actions the current viewer can take on this member
+                                                    const targetRole = member.role; // president | admin | member
+                                                    const isSelf = member.id === user?.id;
+
+                                                    // Build list of allowed actions
+                                                    const actions = [];
+
+                                                    if (!isSelf) {
+                                                        if (isPresident || isAdmin || isCollegeAdmin) {
+                                                            // Make Admin — only for plain members
+                                                            if (targetRole === "member") {
+                                                                actions.push({
+                                                                    key: "make-admin",
+                                                                    label: "Make Admin",
+                                                                    icon: Shield,
+                                                                    color: "text-blue-400 hover:bg-blue-500/10",
+                                                                    onClick: () => handleMakeAdmin(member.id),
+                                                                });
                                                             }
-                                                            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-colors"
-                                                            title="Remove Member"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    )}
+                                                            // Remove Admin — college_admin or president only, target must be admin
+                                                            if ((isCollegeAdmin || isPresident) && targetRole === "admin") {
+                                                                actions.push({
+                                                                    key: "remove-admin",
+                                                                    label: "Remove Admin",
+                                                                    icon: ShieldOff,
+                                                                    color: "text-orange-400 hover:bg-orange-500/10",
+                                                                    onClick: () => handleRemoveAdmin(member.id),
+                                                                });
+                                                            }
+                                                            // Make President — president or college_admin, target must not already be president
+                                                            if ((isPresident || isCollegeAdmin) && targetRole !== "president") {
+                                                                actions.push({
+                                                                    key: "make-president",
+                                                                    label: isPresident ? "Transfer Presidency" : "Make President",
+                                                                    icon: Crown,
+                                                                    color: "text-yellow-400 hover:bg-yellow-500/10",
+                                                                    onClick: () => handleMakePresident(member.id, isPresident),
+                                                                });
+                                                            }
+                                                            // Remove President — college_admin only, target must be president
+                                                            if (isCollegeAdmin && targetRole === "president") {
+                                                                actions.push({
+                                                                    key: "remove-president",
+                                                                    label: "Remove President",
+                                                                    icon: Crown,
+                                                                    color: "text-orange-400 hover:bg-orange-500/10",
+                                                                    onClick: () => handleRemovePresident(member.id),
+                                                                });
+                                                            }
+                                                            // Remove Member — can't remove president
+                                                            if (targetRole !== "president") {
+                                                                actions.push({
+                                                                    key: "remove-member",
+                                                                    label: "Remove Member",
+                                                                    icon: UserMinus,
+                                                                    color: "text-red-400 hover:bg-red-500/10",
+                                                                    onClick: () => handleRemoveMember(member.id),
+                                                                });
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (actions.length === 0) return null;
+
+                                                    return (
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setMemberMenuOpenId(
+                                                                        memberMenuOpenId === member.id
+                                                                            ? null
+                                                                            : member.id,
+                                                                    );
+                                                                }}
+                                                                onBlur={() =>
+                                                                    setTimeout(
+                                                                        () => setMemberMenuOpenId(null),
+                                                                        150,
+                                                                    )
+                                                                }
+                                                                className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-700/50 rounded-md transition-colors focus:outline-none"
+                                                                title="Member actions"
+                                                            >
+                                                                <MoreVertical className="w-4 h-4" />
+                                                            </button>
+
+                                                            {memberMenuOpenId === member.id && (
+                                                                <div className="absolute right-0 mt-1 w-48 bg-[#16192B] border border-gray-700/60 rounded-xl shadow-2xl py-1 z-50 overflow-hidden">
+                                                                    {actions.map((action) => (
+                                                                        <button
+                                                                            key={action.key}
+                                                                            onClick={action.onClick}
+                                                                            className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-sm transition-colors ${action.color}`}
+                                                                        >
+                                                                            <action.icon className="w-3.5 h-3.5 shrink-0" />
+                                                                            {action.label}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     ))}
@@ -1266,9 +1481,46 @@ export default function ClubProfilePage() {
                                 </button>
                                 <button
                                     onClick={confirmDialog.onConfirm}
-                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                                    className={
+                                        confirmDialog.actionVariant === "primary"
+                                            ? "px-4 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded-lg text-sm font-medium transition-colors"
+                                            : "px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                                    }
                                 >
-                                    {confirmDialog.actionLabel || "Delete"}
+                                    {confirmDialog.actionLabel || "Confirm"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body,
+                )}
+
+            {/* Error Dialog Modal */}
+            {errorDialog.isOpen &&
+                createPortal(
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <div className="bg-[#12141D] border border-red-500/20 rounded-2xl w-full max-w-sm shadow-2xl p-6">
+                            <div className="flex items-start gap-3 mb-4">
+                                <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                                    <X className="w-4 h-4 text-red-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-semibold text-white">
+                                        {errorDialog.title || "Error"}
+                                    </h3>
+                                    <p className="text-gray-400 text-sm mt-1">
+                                        {errorDialog.message}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() =>
+                                        setErrorDialog((prev) => ({ ...prev, isOpen: false }))
+                                    }
+                                    className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    OK
                                 </button>
                             </div>
                         </div>
