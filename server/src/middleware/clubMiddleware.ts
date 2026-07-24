@@ -45,7 +45,7 @@ const canUpdateClub = async (
     return res.status(403).json({ error: "Forbidden" });
 };
 
-const canDeleteClub = async (
+const canPerformMajorClubOperations = async (
     req: AuthRequest,
     res: express.Response,
     next: express.NextFunction,
@@ -86,4 +86,4 @@ const canDeleteClub = async (
     return res.status(403).json({ error: "Forbidden" });
 };
 
-export { canUpdateClub, canDeleteClub };
+export { canUpdateClub, canPerformMajorClubOperations };

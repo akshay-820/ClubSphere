@@ -6,11 +6,15 @@ import {
     getClubDetailsById,
     searchUsersToAdd,
 } from "../controllers/clubController.js";
-import { isLoggedIn } from "../middleware/authMiddleware.js";
-import { canDeleteClub, canUpdateClub } from "../middleware/clubMiddleware.js";
+import { isLoggedIn, roleGuard } from "../middleware/authMiddleware.js";
+import {
+    canPerformMajorClubOperations,
+    canUpdateClub,
+} from "../middleware/clubMiddleware.js";
 import { upload } from "../middleware/upload.js";
 import {
     addMemberInClub,
+    appointPresident,
     makeAdmin,
     removeAdmin,
     removeMemberInClub,
@@ -37,7 +41,7 @@ router
     .route("/:id")
     .get(isLoggedIn, getClubDetailsById)
     .patch(isLoggedIn, canUpdateClub, upload.single("logo"), updateClubDetails)
-    .delete(isLoggedIn, canDeleteClub, deleteClubPerm);
+    .delete(isLoggedIn, canPerformMajorClubOperations, deleteClubPerm);
 
 router
     .route("/:id/search-users")
@@ -76,6 +80,11 @@ router
 
 //update user club role
 router.route("/:id/make-admin").post(isLoggedIn, canUpdateClub, makeAdmin);
-router.route("/:id/remove-admin").post(isLoggedIn, canDeleteClub, removeAdmin);
+router
+    .route("/:id/remove-admin")
+    .post(isLoggedIn, canPerformMajorClubOperations, removeAdmin);
+router
+    .route("/:id/make-president")
+    .post(isLoggedIn, canPerformMajorClubOperations, appointPresident);
 
 export default router;

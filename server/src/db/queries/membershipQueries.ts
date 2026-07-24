@@ -1,3 +1,4 @@
+import { Pool, PoolClient } from "pg";
 import pool from "../index.js";
 export type clubRole = "member" | "admin" | "president" | null;
 //to find the role of the user in a particular club for the middleware
@@ -95,5 +96,45 @@ export async function changeUserClubRole(
         RETURNING id,user_id,club_id,role;
     `;
     const result = await pool.query(query, [userId, clubId, role]);
+    return result.rows[0];
+}
+
+export async function transferPresident(
+    client: PoolClient,
+    userId: string,
+    clubId: string,
+    currentUserId: string,
+) {
+    const query = `
+        UPDATE memberships
+        SET role = 'president'
+        WHERE user_id = $1
+            AND club_id = $2
+        RETURNING id,user_id,role,club_id;
+    `;
+    const result = await client.query(query, [userId, clubId]);
+
+    await client.query(
+        `
+            UPDATE memberships
+            SET role = 'admin'
+            WHERE user_id = $1
+            AND club_id = $2;
+        `,
+        [currentUserId, clubId],
+    );
+    return result.rows[0];
+}
+
+//this function is for college admins to appoint president - since partial unique
+export async function makePresident(userId: string, clubId: string) {
+    const query = `
+        UPDATE memberships
+        SET role = 'president'
+        WHERE user_id = $1
+            AND club_id = $2
+        RETURNING id,user_id,club_id,role;
+    `;
+    const result = await pool.query(query, [userId, clubId]);
     return result.rows[0];
 }

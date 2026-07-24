@@ -16,7 +16,6 @@ import {
     verifyRazorpayWebhookSignature,
 } from "../utils/razorpay.js";
 import {
-    countEventRegistrations,
     getClubOfEvent,
     isUserRegisteredForEvent,
 } from "../db/queries/eventRegistrationsQueries.js";
@@ -27,7 +26,6 @@ import {
     completePaymentAndEnsureRegistration,
     getPendingEventRegistrationById,
 } from "../db/queries/eventPaymentQueries.js";
-import { transcode } from "node:buffer";
 
 const paidRegistrationTypes = new Set(["paid", "both"]);
 

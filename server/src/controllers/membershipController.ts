@@ -1,11 +1,14 @@
 import express from "express";
+import pool from "../db/index.js";
 import {
     addMembership,
     changeUserClubRole,
     getMemberships,
     getUserRoleInClub,
     isMember,
+    makePresident,
     removeMembership,
+    transferPresident,
 } from "../db/queries/membershipQueries.js";
 import { AuthRequest } from "../middleware/authMiddleware.js";
 import { getRouteParam } from "../utils/validation.js";
@@ -110,11 +113,19 @@ const makeAdmin = async (req: AuthRequest, res: express.Response) => {
         }
         const clubId = getRouteParam(req.params.id);
 
+        const currentUserId = req.user?.userId;
+        if (!currentUserId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
         const clubRole = await getUserRoleInClub(userId, clubId);
-        if (clubRole === "admin" || clubRole === "president") {
+        if (!clubRole || clubRole === "admin" || clubRole === "president") {
             return res.status(409).json({ error: "Cannot update user's role" });
         }
         const role = "admin";
+        if (currentUserId === userId) {
+            return res.status(403).json({ error: "Cannot update own role" });
+        }
 
         const result = await changeUserClubRole(userId, clubId, role);
         if (!result) {
@@ -138,9 +149,19 @@ const removeAdmin = async (req: AuthRequest, res: express.Response) => {
             return res.status(400).json({ error: "User ID required" });
         }
         const clubId = getRouteParam(req.params.id);
+
+        const currentUserId = req.user?.userId;
+        if (!currentUserId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
         const clubRole = await getUserRoleInClub(userId, clubId);
-        if (clubRole === "president" || clubRole === "member") {
+        if (!clubRole || clubRole === "president" || clubRole === "member") {
             return res.status(409).json({ error: "Cannot update user's role" });
+        }
+
+        if (currentUserId === userId) {
+            return res.status(403).json({ error: "Cannot update own role" });
         }
 
         const result = await changeUserClubRole(userId, clubId, "member");
@@ -158,10 +179,94 @@ const removeAdmin = async (req: AuthRequest, res: express.Response) => {
     }
 };
 
+//if user is the club president - appoint president and demote him (transaction)
+//else if user is a college admin - just appoint president
+const appointPresident = async (req: AuthRequest, res: express.Response) => {
+    let transactionStarted = false;
+    const client = await pool.connect();
+    try {
+        const currentUserId = req.user?.userId;
+        const currentUserGlobalRole = req.user?.role;
+        if (!currentUserId || !currentUserGlobalRole) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        const userId = req.body.userId;
+        const clubId = getRouteParam(req.params.id);
+        if (!userId) {
+            return res.status(400).json({ error: "User ID required" });
+        }
+        const clubRole = await getUserRoleInClub(userId, clubId);
+        if (!clubRole) {
+            return res
+                .status(404)
+                .json({ error: "User is not member of the club" });
+        }
+        if (clubRole === "president") {
+            return res.status(409).json({
+                error: "User is already the president",
+            });
+        }
+
+        const currentUserClubRole = await getUserRoleInClub(
+            currentUserId,
+            clubId,
+        );
+
+        if (currentUserId === userId) {
+            return res.status(403).json({ error: "Cannot update own role" });
+        }
+
+        if (currentUserClubRole === "president") {
+            await client.query("BEGIN");
+            transactionStarted = true;
+            const result = await transferPresident(
+                client,
+                userId,
+                clubId,
+                currentUserId,
+            );
+            if (!result) {
+                await client.query("ROLLBACK");
+                return res
+                    .status(404)
+                    .json({ error: "User membership or club not found" });
+            }
+            await client.query("COMMIT");
+            transactionStarted = false;
+            return res.status(200).json({
+                message: "President transfer successful",
+                result,
+            });
+        }
+        const result = await makePresident(userId, clubId);
+        if (!result) {
+            return res
+                .status(404)
+                .json({ error: "User membership or club not found" });
+        }
+        return res.status(200).json({
+            message: "Successfully appointed president",
+            result,
+        });
+    } catch (err: any) {
+        if (transactionStarted) await client.query("ROLLBACK");
+        if (err.code === "23505") {
+            return res.status(409).json({
+                error: "President already exists in this club",
+            });
+        }
+        console.error("Error while appointing president", err);
+        return res.status(500).json({ error: "Internal server error" });
+    } finally {
+        client.release();
+    }
+};
+
 export {
     addMemberInClub,
     removeMemberInClub,
     showAllMembers,
     makeAdmin,
     removeAdmin,
+    appointPresident,
 };
